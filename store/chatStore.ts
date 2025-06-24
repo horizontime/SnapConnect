@@ -61,7 +61,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
       const chats = data.map((row: any): Chat & { user: User } => {
         const friendId = row.user1_id === userId ? row.user2_id : row.user1_id;
-        const user = (profiles || []).find((p: any) => p.id === friendId);
+
+        // Raw profile row from Supabase
+        const raw = (profiles || []).find((p: any) => p.id === friendId);
+
+        // Convert DB column names to our camel-case User type
+        const mappedUser: User = raw
+          ? {
+              id: raw.id,
+              username: raw.username,
+              displayName: raw.display_name || raw.username,
+              avatar: raw.avatar_url,
+              isOnline: raw.is_online ?? false,
+            }
+          : {
+              id: friendId.toString(),
+              username: '',
+              displayName: '',
+              avatar: '',
+              isOnline: false,
+            };
 
         return {
           id: row.id.toString(),
@@ -73,7 +92,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             isRead: row.last_message_is_read,
           },
           unreadCount: row.unread_count,
-          user: user as User,
+          user: mappedUser,
         };
       });
 
