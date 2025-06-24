@@ -19,7 +19,24 @@ import { colors } from '@/constants/colors';
 import { User, MessageType } from '@/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { ArrowLeft, Send, Check } from 'lucide-react-native';
-import { Video, ResizeMode } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
+
+// Video preview component using expo-video
+function VideoPreview({ uri }: { uri: string }) {
+  const player = useVideoPlayer(uri, player => {
+    player.loop = true;
+    player.muted = true;
+    player.play();
+  });
+
+  return (
+    <VideoView
+      style={styles.preview}
+      player={player}
+      contentFit="cover"
+    />
+  );
+}
 
 export default function ModalScreen() {
   const router = useRouter();
@@ -159,14 +176,7 @@ function SelectFriendsScreen() {
       {params.mediaUri && (
         <View style={styles.previewContainer}>
           {params.mediaType === 'video' ? (
-            <Video
-              source={{ uri: params.mediaUri }}
-              style={styles.preview}
-              resizeMode={ResizeMode.COVER}
-              shouldPlay
-              isLooping
-              isMuted
-            />
+            <VideoPreview uri={params.mediaUri} />
           ) : (
             <Image source={{ uri: params.mediaUri }} style={styles.preview} resizeMode="cover" />
           )}

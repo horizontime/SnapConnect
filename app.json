@@ -61,7 +61,7 @@
           "isAccessMediaLocationEnabled": true
         }
       ],
-      "expo-av"
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true
