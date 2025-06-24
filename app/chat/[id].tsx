@@ -8,6 +8,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { formatTimestamp } from '@/utils/timeUtils';
 import { Camera, Send } from 'lucide-react-native';
 import { Message } from '@/types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ChatScreen() {
   const { id, userId } = useLocalSearchParams<{ id: string; userId: string }>();
@@ -17,6 +18,7 @@ export default function ChatScreen() {
   
   const [text, setText] = useState('');
   const flatListRef = useRef<FlatList>(null);
+  const insets = useSafeAreaInsets();
   
   const friend = getFriendById(userId);
   const chatMessages = messages[id] || [];
@@ -102,7 +104,7 @@ export default function ChatScreen() {
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : insets.bottom}
       >
         <FlatList
           ref={flatListRef}
@@ -123,7 +125,7 @@ export default function ChatScreen() {
           )}
         />
         
-        <View style={styles.inputContainer}>
+        <View style={[styles.inputContainer, { paddingBottom: insets.bottom }]}>
           <TouchableOpacity style={styles.cameraButton} onPress={handleCamera}>
             <Camera size={24} color={colors.primary} />
           </TouchableOpacity>
