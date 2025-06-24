@@ -24,7 +24,7 @@ export default function ChatsScreen() {
   const { userId } = useAuthStore();
   const { getChatsWithUserData, fetchChats } = useChatStore();
   const { friends, fetchFriends } = useFriendStore();
-  const [view, setView] = useState<'chats' | 'friends'>('chats');
+  const [view, setView] = useState<'snaps' | 'chats' | 'friends'>("chats");
   
   const chatsWithUserData = getChatsWithUserData();
   
@@ -90,9 +90,17 @@ export default function ChatsScreen() {
 
   const displayChats = [...chatsWithUserData, ...friendChats];
 
+  const snaps = chatsWithUserData.filter(c => c.lastMessage.type !== 'text');
+
   return (
     <View style={styles.container}>
       <View style={styles.toggleContainer}>
+        <TouchableOpacity
+          style={[styles.toggleButton, view === 'snaps' && styles.toggleButtonActive]}
+          onPress={() => setView('snaps')}
+        >
+          <Text style={[styles.toggleText, view === 'snaps' && styles.toggleTextActive]}>Snaps</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={[styles.toggleButton, view === 'chats' && styles.toggleButtonActive]}
           onPress={() => setView('chats')}
@@ -107,7 +115,31 @@ export default function ChatsScreen() {
         </TouchableOpacity>
       </View>
 
-      {view === 'chats' ? (
+      {view === 'snaps' ? (
+        <FlatList
+          data={snaps}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <ChatListItem
+              id={item.id}
+              username={item.user.username}
+              displayName={item.user.displayName}
+              avatar={item.user.avatar}
+              lastMessage={item.lastMessage}
+              unreadCount={item.unreadCount}
+              isOnline={item.user.isOnline}
+              onPress={() => navigateToChat(item.id, item.user.id)}
+            />
+          )}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No snaps</Text>
+              <Text style={styles.emptySubtext}>Snaps you receive will appear here</Text>
+            </View>
+          )}
+        />
+      ) : view === 'chats' ? (
         <FlatList
           data={displayChats}
           keyExtractor={(item) => item.id}
@@ -120,7 +152,13 @@ export default function ChatsScreen() {
               lastMessage={item.lastMessage}
               unreadCount={item.unreadCount}
               isOnline={item.user.isOnline}
-              onPress={() => navigateToChat(item.id, item.user.id)}
+              onPress={() => {
+                if (item.id.startsWith('friend-')) {
+                  handleFriendPress(item.user.id);
+                } else {
+                  navigateToChat(item.id, item.user.id);
+                }
+              }}
             />
           )}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
