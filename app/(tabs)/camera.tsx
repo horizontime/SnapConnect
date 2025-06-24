@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Platform } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
@@ -16,8 +16,6 @@ export default function CameraScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
-  
-  const cameraRef = useRef(null);
   
   if (!permission) {
     // Camera permissions are still loading
@@ -66,30 +64,30 @@ export default function CameraScreen() {
       <StatusBar style="light" />
       
       <CameraView
-        style={styles.camera}
+        style={StyleSheet.absoluteFill}
         facing={facing}
-      >
-        <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-          <X size={24} color={colors.card} />
-        </TouchableOpacity>
-        
-        {showFilters ? (
-          <View style={styles.filtersContainer}>
-            <FilterSelector
-              filters={mockFilters}
-              selectedFilter={selectedFilter}
-              onSelectFilter={handleSelectFilter}
-            />
-          </View>
-        ) : (
-          <CameraControls
-            onCapture={handleCapture}
-            onFlip={handleFlip}
-            onFilterToggle={handleFilterToggle}
-            isRecording={isRecording}
+      />
+
+      <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+        <X size={24} color={colors.card} />
+      </TouchableOpacity>
+
+      {showFilters ? (
+        <View style={styles.filtersContainer}>
+          <FilterSelector
+            filters={mockFilters}
+            selectedFilter={selectedFilter}
+            onSelectFilter={handleSelectFilter}
           />
-        )}
-      </CameraView>
+        </View>
+      ) : (
+        <CameraControls
+          onCapture={handleCapture}
+          onFlip={handleFlip}
+          onFilterToggle={handleFilterToggle}
+          isRecording={isRecording}
+        />
+      )}
     </View>
   );
 }
