@@ -37,14 +37,35 @@ export default function ChatsScreen() {
   };
 
   const handleFriendPress = async (friendId: string) => {
-    let existingChat = chatsWithUserData.find(chat => chat.userId === friendId);
-    let chatId: string = existingChat ? existingChat.id : '';
+    if (!userId) return;
 
+    // Try to find an existing chat locally first
+    let existingChat = chatsWithUserData.find(c => c.userId === friendId);
+
+    // If not found locally, check Supabase directly (handles reversed user order)
     if (!existingChat) {
+      const { data: rows } = await supabase
+        .from('chats')
+        .select('id')
+        .or(`and(user1_id.eq.${userId},user2_id.eq.${friendId}),and(user1_id.eq.${friendId},user2_id.eq.${userId})`)
+        .limit(1);
+
+      if (rows && rows.length > 0) {
+        existingChat = { id: rows[0].id.toString() } as any; // minimal shape
+      }
+    }
+
+    let chatId = existingChat ? existingChat.id : '';
+
+    // If still not found, create a new chat with deterministic ordering
+    if (!chatId) {
+      // Ensure deterministic participant order (lexicographical) to avoid duplicate pairs
+      const [user1, user2] = userId < friendId ? [userId, friendId] : [friendId, userId];
+
       try {
         const { data, error } = await supabase
           .from('chats')
-          .insert({ user1_id: userId, user2_id: friendId })
+          .insert({ user1_id: user1, user2_id: user2 })
           .select('id')
           .single();
 
