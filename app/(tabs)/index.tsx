@@ -21,7 +21,7 @@ type StoryListItem = {
 export default function ChatsScreen() {
   const router = useRouter();
   const { userId } = useAuthStore();
-  const { getChatsWithUserData } = useChatStore();
+  const { getChatsWithUserData, fetchChats } = useChatStore();
   const { getStoriesWithUserData, getMyStories } = useStoryStore();
   
   const chatsWithUserData = getChatsWithUserData();
@@ -39,6 +39,11 @@ export default function ChatsScreen() {
   const navigateToCamera = () => {
     router.push('/(tabs)/camera');
   };
+
+  // Load chats once on mount
+  useEffect(() => {
+    fetchChats();
+  }, []);
 
   const storyListData: StoryListItem[] = [
     { id: 'my-story', isCurrentUser: true },

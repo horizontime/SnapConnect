@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function ChatScreen() {
   const { id, userId } = useLocalSearchParams<{ id: string; userId: string }>();
   const router = useRouter();
-  const { messages, sendMessage, markChatAsRead, currentChatId, setCurrentChatId } = useChatStore();
+  const { messages, sendMessage, markChatAsRead, currentChatId, setCurrentChatId, fetchMessages } = useChatStore();
   const { getFriendById } = useFriendStore();
   
   const [text, setText] = useState('');
@@ -27,6 +27,7 @@ export default function ChatScreen() {
     if (id) {
       setCurrentChatId(id);
       markChatAsRead(id);
+      fetchMessages(id);
     }
     
     return () => {
