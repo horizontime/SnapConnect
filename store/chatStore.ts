@@ -16,12 +16,16 @@ type ChatState = {
   expireMessage: (chatId: string, messageId: string) => void;
   replayMessage: (chatId: string, messageId: string) => void;
   screenshotMessage: (chatId: string, messageId: string) => void;
+  subscribeToChat: (chatId: string) => void;
+  unsubscribeFromChat: (chatId: string) => void;
+  _subscriptions: Record<string, any>;
 };
 
 export const useChatStore = create<ChatState>((set, get) => ({
   chats: [],
   messages: {},
   currentChatId: null,
+  _subscriptions: {},
   
   setCurrentChatId: (chatId) => set({ currentChatId: chatId }),
   
@@ -240,4 +244,50 @@ export const useChatStore = create<ChatState>((set, get) => ({
     
     return { messages: updatedMessages };
   }),
+
+  subscribeToChat: (chatId) => {
+    const { _subscriptions } = get() as any;
+    if (_subscriptions[chatId]) return; // already subscribed
+
+    const channel = supabase
+      .channel(`chat_${chatId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` }, (payload) => {
+        const newRow = payload.new as any;
+        const newMsg: Message = {
+          id: newRow.id.toString(),
+          chatId: chatId,
+          senderId: newRow.sender_id,
+          type: newRow.type,
+          content: newRow.content,
+          timestamp: newRow.timestamp,
+          isRead: false,
+        };
+
+        set(state => {
+          const existing = state.messages[chatId] || [];
+          // avoid adding duplicate message (can happen because we optimistically add right after INSERT)
+          const alreadyExists = existing.some(m => m.id === newMsg.id);
+          if (alreadyExists) return state;
+
+          return {
+            messages: {
+              ...state.messages,
+              [chatId]: [...existing, newMsg],
+            },
+          };
+        });
+      })
+      .subscribe();
+
+    _subscriptions[chatId] = channel;
+  },
+
+  unsubscribeFromChat: (chatId) => {
+    const { _subscriptions } = get() as any;
+    const ch = _subscriptions[chatId];
+    if (ch) {
+      supabase.removeChannel(ch);
+      delete _subscriptions[chatId];
+    }
+  },
 }));

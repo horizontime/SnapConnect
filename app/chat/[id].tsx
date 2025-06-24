@@ -37,6 +37,18 @@ export default function ChatScreen() {
     };
   }, [id]);
   
+  // subscribe to realtime
+  useEffect(() => {
+    if (id) {
+      useChatStore.getState().subscribeToChat(id);
+    }
+    return () => {
+      if (id) {
+        useChatStore.getState().unsubscribeFromChat(id);
+      }
+    };
+  }, [id]);
+  
   const handleSend = () => {
     if (!text.trim()) return;
     
