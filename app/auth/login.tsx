@@ -4,7 +4,7 @@ import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/constants/colors';
 import { Button } from '@/components/ui/Button';
 import { useRouter } from 'expo-router';
-import { mockUsers } from '@/constants/mockData';
+import { supabase } from '@/utils/supabase';
 import { Stack } from 'expo-router';
 
 export default function LoginScreen() {
@@ -20,20 +20,43 @@ export default function LoginScreen() {
     setIsLoading(true);
     setError('');
     
-    // Simulate API call
-    setTimeout(() => {
-      // Find user by username (in a real app, this would be a server call)
-      const user = mockUsers.find(u => u.username.toLowerCase() === username.toLowerCase());
-      
-      if (user && password.length > 0) {
-        login(user.id, user.username, user.displayName, user.avatar);
+    (async () => {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: username.trim(), // Treat username field as email for now
+        password: password.trim(),
+      });
+
+      if (authError) {
+        setError(authError.message);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!data.session) {
+        setError('No active session');
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch profile data for this user
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profile) {
+        login(profile.id, profile.username, profile.display_name, profile.avatar_url);
         router.replace('/(tabs)');
       } else {
-        setError('Invalid username or password');
+        // If profile row missing, create a minimal one
+        await supabase.from('profiles').insert({ id: data.user.id, username: username.trim() });
+        login(data.user.id, username.trim(), username.trim(), '');
+        router.replace('/(tabs)');
       }
-      
+
       setIsLoading(false);
-    }, 1000);
+    })();
   };
   
   const handleSignUp = () => {
@@ -59,7 +82,7 @@ export default function LoginScreen() {
           
           <TextInput
             style={styles.input}
-            placeholder="Username"
+            placeholder="Email"
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
@@ -94,10 +117,6 @@ export default function LoginScreen() {
             <Text style={styles.signUpText}>Sign Up</Text>
           </TouchableOpacity>
         </View>
-        
-        <Text style={styles.hint}>
-          Hint: Try username "woodmaster" with any password
-        </Text>
       </View>
     </>
   );
@@ -172,12 +191,5 @@ const styles = StyleSheet.create({
     color: colors.danger,
     marginBottom: 16,
     textAlign: 'center',
-  },
-  hint: {
-    color: colors.textLight,
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 40,
-    fontStyle: 'italic',
   },
 });

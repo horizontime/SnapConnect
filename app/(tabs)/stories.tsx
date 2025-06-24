@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, StyleSheet, FlatList, Text, TouchableOpacity, Image } from 'react-native';
 import { useStoryStore } from '@/store/storyStore';
 import { useAuthStore } from '@/store/authStore';
@@ -10,9 +10,13 @@ import { formatStoryTimestamp } from '@/utils/timeUtils';
 export default function StoriesScreen() {
   const router = useRouter();
   const { userId } = useAuthStore();
-  const { getFriendsStories } = useStoryStore();
+  const { getFriendsStories, fetchStories } = useStoryStore();
   
   const friendsStories = userId ? getFriendsStories(userId) : [];
+  
+  useEffect(() => {
+    fetchStories();
+  }, []);
   
   const navigateToStory = (storyId: string) => {
     router.push(`/story/${storyId}`);

@@ -5,6 +5,7 @@ import { colors } from '@/constants/colors';
 import { Button } from '@/components/ui/Button';
 import { useRouter } from 'expo-router';
 import { Stack } from 'expo-router';
+import { supabase } from '@/utils/supabase';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -20,24 +21,37 @@ export default function SignupScreen() {
     setIsLoading(true);
     setError('');
     
-    // Simulate API call
-    setTimeout(() => {
-      if (displayName && username && password) {
-        // In a real app, this would create a user on the server
-        const newUserId = Date.now().toString();
-        login(
-          newUserId, 
-          username, 
-          displayName, 
-          'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80'
-        );
-        router.replace('/(tabs)');
-      } else {
+    (async () => {
+      if (!displayName || !username || !password) {
         setError('Please fill in all fields');
+        setIsLoading(false);
+        return;
       }
-      
+
+      // Treat username as email for now
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: username.trim(),
+        password: password.trim(),
+      });
+
+      if (signUpError) {
+        setError(signUpError.message);
+        setIsLoading(false);
+        return;
+      }
+
+      // Insert profile row
+      await supabase.from('profiles').insert({
+        id: data.user?.id,
+        username: username.trim(),
+        display_name: displayName.trim(),
+        avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80',
+      });
+
+      login(data.user!.id, username.trim(), displayName.trim(), 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80');
+      router.replace('/(tabs)');
       setIsLoading(false);
-    }, 1000);
+    })();
   };
   
   const handleLogin = () => {
@@ -71,11 +85,12 @@ export default function SignupScreen() {
           
           <TextInput
             style={styles.input}
-            placeholder="Username"
+            placeholder="Email"
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
             autoCorrect={false}
+            keyboardType="email-address"
           />
           
           <TextInput
