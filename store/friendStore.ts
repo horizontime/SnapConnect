@@ -43,12 +43,12 @@ export const useFriendStore = create<FriendState>((set, get) => ({
     try {
       const { data: rows, error } = await supabase
         .from('friends')
-        .select('friend_id')
-        .eq('user_id', userId);
+        .select('user_id, friend_id')
+        .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
 
       if (error) throw error;
 
-      const friendIds = (rows || []).map((r: any) => r.friend_id);
+      const friendIds = (rows || []).map((r: any) => (r.user_id === userId ? r.friend_id : r.user_id));
 
       if (friendIds.length === 0) {
         set({ friends: [] });

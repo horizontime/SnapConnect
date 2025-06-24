@@ -4,8 +4,6 @@ import { useChatStore } from '@/store/chatStore';
 import { ChatListItem } from '@/components/chat/ChatListItem';
 import { colors } from '@/constants/colors';
 import { useRouter } from 'expo-router';
-import { StoryThumbnail } from '@/components/story/StoryThumbnail';
-import { useStoryStore } from '@/store/storyStore';
 import { useAuthStore } from '@/store/authStore';
 import { useFriendStore } from '@/store/friendStore';
 import { FriendListItem } from '@/components/friend/FriendListItem';
@@ -25,20 +23,13 @@ export default function ChatsScreen() {
   const router = useRouter();
   const { userId } = useAuthStore();
   const { getChatsWithUserData, fetchChats } = useChatStore();
-  const { getStoriesWithUserData, getMyStories } = useStoryStore();
   const { friends, fetchFriends } = useFriendStore();
   const [view, setView] = useState<'chats' | 'friends'>('chats');
   
   const chatsWithUserData = getChatsWithUserData();
-  const storiesWithUserData = getStoriesWithUserData();
-  const myStories = userId ? getMyStories(userId) : [];
   
   const navigateToChat = (chatId: string, userId: string) => {
     router.push(`/chat/${chatId}?userId=${userId}`);
-  };
-  
-  const navigateToStory = (storyId: string) => {
-    router.push(`/story/${storyId}`);
   };
   
   const navigateToCamera = () => {
@@ -81,20 +72,6 @@ export default function ChatsScreen() {
       fetchFriends();
     }
   }, [view]);
-
-  const storyListData: StoryListItem[] = [
-    { id: 'my-story', isCurrentUser: true },
-    ...storiesWithUserData
-      .filter(story => story.userId !== userId)
-      .map(story => ({
-        id: story.id,
-        username: story.user.username,
-        avatar: story.user.avatar,
-        hasStory: true,
-        viewed: story.viewed,
-        userId: story.userId,
-      })),
-  ];
 
   const friendChats = friends
     .filter(f => !chatsWithUserData.some(c => c.user.id === f.id))
@@ -147,44 +124,7 @@ export default function ChatsScreen() {
             />
           )}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
-          ListHeaderComponent={() => (
-            <View style={styles.storiesContainer}>
-              <FlatList
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                data={storyListData}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => {
-                  if (item.isCurrentUser) {
-                    const hasMyStory = myStories.length > 0;
-                    return (
-                      <StoryThumbnail
-                        id="my-story"
-                        username="Your Story"
-                        avatar={userId ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80' : ''}
-                        hasStory={hasMyStory}
-                        isViewed={false}
-                        isCurrentUser={true}
-                        onPress={hasMyStory ? () => navigateToStory(myStories[0].id) : navigateToCamera}
-                      />
-                    );
-                  }
-                  
-                  return (
-                    <StoryThumbnail
-                      id={item.id}
-                      username={item.username || 'User'}
-                      avatar={item.avatar || ''}
-                      hasStory={item.hasStory || false}
-                      isViewed={item.viewed || false}
-                      onPress={() => navigateToStory(item.id)}
-                    />
-                  );
-                }}
-                contentContainerStyle={styles.storiesList}
-              />
-            </View>
-          )}
+          ListHeaderComponent={() => null}
           ListEmptyComponent={() => (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No chats yet</Text>
@@ -249,14 +189,6 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
     marginLeft: 78,
-  },
-  storiesContainer: {
-    backgroundColor: colors.card,
-    paddingVertical: 12,
-    marginBottom: 8,
-  },
-  storiesList: {
-    paddingHorizontal: 8,
   },
   emptyContainer: {
     flex: 1,
