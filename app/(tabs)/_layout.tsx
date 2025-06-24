@@ -4,9 +4,11 @@ import { Camera, MessageSquare, Users, User } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 import { TouchableOpacity, StyleSheet } from 'react-native';
 import { useAuthStore } from '@/store/authStore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
   const { isAuthenticated } = useAuthStore();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -14,7 +16,11 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textLight,
         tabBarShowLabel: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: {
+          ...styles.tabBar,
+          paddingBottom: insets.bottom,
+          height: 60 + insets.bottom,
+        },
         headerStyle: styles.header,
         headerTitleStyle: styles.headerTitle,
         headerShadowVisible: false,
