@@ -20,13 +20,11 @@ export default function ProfileScreen() {
   };
   
   const handleShowQR = () => {
-    // In a real app, this would show the QR code
-    console.log('Show QR code');
+    router.push('/profile/shoptag' as any);
   };
   
   const handleAddFriends = () => {
-    // In a real app, this would navigate to add friends screen
-    console.log('Add friends');
+    router.push('/friends/add' as any);
   };
   
   const handleSettings = () => {

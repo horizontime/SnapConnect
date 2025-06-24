@@ -56,6 +56,9 @@ function RootLayoutNav() {
       <Stack.Screen name="auth/signup" options={{ headerShown: true }} />
       <Stack.Screen name="chat/[id]" options={{ headerShown: true }} />
       <Stack.Screen name="story/[id]" options={{ headerShown: false, animation: 'fade' }} />
+      <Stack.Screen name="friends/add" options={{ title: 'Add Friends' }} />
+      <Stack.Screen name="friends/scan" options={{ title: 'Scan QR Code', presentation: 'modal' }} />
+      <Stack.Screen name="profile/shoptag" options={{ title: 'My ShopTag' }} />
     </Stack>
   );
 }
