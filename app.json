@@ -15,14 +15,25 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.rork.snapconnect-rag-enhanced-social-app-for-woodworking-enthusiasts"
+      "bundleIdentifier": "app.rork.snapconnect-rag-enhanced-social-app-for-woodworking-enthusiasts",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to take photos and videos to share with friends.",
+        "NSMicrophoneUsageDescription": "This app uses the microphone to record audio for videos.",
+        "NSPhotoLibraryUsageDescription": "This app saves photos and videos to your photo library."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "app.rork.snapconnect-rag-enhanced-social-app-for-woodworking-enthusiasts"
+      "package": "app.rork.snapconnect-rag-enhanced-social-app-for-woodworking-enthusiasts",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -33,7 +44,24 @@
         {
           "origin": "https://rork.com/"
         }
-      ]
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to take photos and videos.",
+          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone to record audio for videos.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
+          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos and videos.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ],
+      "expo-av"
     ],
     "experiments": {
       "typedRoutes": true

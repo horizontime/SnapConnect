@@ -15,4 +15,6 @@ export const colors = {
   info: '#2196F3',
   inactive: '#BDBDBD',
   overlay: 'rgba(0, 0, 0, 0.5)',
+  darkGray: '#555555',
+  lightGray: '#F0F0F0',
 };

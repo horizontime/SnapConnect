@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Platform } from 'react-native';
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import React, { useState, useRef } from 'react';
+import { View, StyleSheet, TouchableOpacity, Text, Platform, Alert } from 'react-native';
+import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { CameraControls } from '@/components/camera/CameraControls';
@@ -11,36 +11,108 @@ import { X } from 'lucide-react-native';
 
 export default function CameraScreen() {
   const router = useRouter();
-  const [permission, requestPermission] = useCameraPermissions();
+  const cameraRef = useRef<CameraView>(null);
+  const recordingRef = useRef<any>(null);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [microphonePermission, requestMicrophonePermission] = useMicrophonePermissions();
   const [facing, setFacing] = useState<CameraType>('back');
   const [isRecording, setIsRecording] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   
-  if (!permission) {
-    // Camera permissions are still loading
+  if (!cameraPermission || !microphonePermission) {
+    // Permissions are still loading
     return <View style={styles.container} />;
   }
   
-  if (!permission.granted) {
-    // Camera permissions are not granted yet
+  if (!cameraPermission.granted || !microphonePermission.granted) {
+    // Permissions are not granted yet
     return (
       <View style={styles.permissionContainer}>
-        <Text style={styles.permissionText}>We need your permission to show the camera</Text>
-        <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-          <Text style={styles.permissionButtonText}>Grant Permission</Text>
+        <Text style={styles.permissionText}>
+          We need your permission to use the camera and microphone for photos and videos
+        </Text>
+        <TouchableOpacity 
+          style={styles.permissionButton} 
+          onPress={async () => {
+            const camResult = await requestCameraPermission();
+            const micResult = await requestMicrophonePermission();
+            
+            if (!camResult.granted || !micResult.granted) {
+              Alert.alert(
+                'Permissions Required',
+                'Please enable camera and microphone permissions in your device settings to use this feature.'
+              );
+            }
+          }}
+        >
+          <Text style={styles.permissionButtonText}>Grant Permissions</Text>
         </TouchableOpacity>
       </View>
     );
   }
   
   const handleCapture = async () => {
-    // In a real app, this would capture a photo or video
-    // For now, we'll just simulate it
-    console.log('Capturing...');
+    if (!cameraRef.current) return;
     
-    // Navigate to preview screen (would be implemented in a real app)
-    // router.push('/preview');
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.9,
+        base64: false,
+        exif: false,
+      });
+      
+      if (photo) {
+        // Navigate to friend selection with the photo
+        router.push({
+          pathname: '/modal',
+          params: { 
+            screen: 'selectFriends',
+            mediaUri: photo.uri,
+            mediaType: 'image'
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Failed to take picture:', error);
+      Alert.alert('Error', 'Failed to take picture');
+    }
+  };
+  
+  const handleStartRecording = async () => {
+    if (!cameraRef.current || isRecording) return;
+    
+    try {
+      setIsRecording(true);
+      recordingRef.current = await cameraRef.current.recordAsync({
+        maxDuration: 60, // 60 seconds max
+      });
+      
+      const video = await recordingRef.current;
+      if (video) {
+        // Navigate to friend selection with the video
+        router.push({
+          pathname: '/modal',
+          params: { 
+            screen: 'selectFriends',
+            mediaUri: video.uri,
+            mediaType: 'video'
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Failed to record video:', error);
+      Alert.alert('Error', 'Failed to record video');
+    } finally {
+      setIsRecording(false);
+      recordingRef.current = null;
+    }
+  };
+  
+  const handleStopRecording = () => {
+    if (cameraRef.current && isRecording) {
+      cameraRef.current.stopRecording();
+    }
   };
   
   const handleFlip = () => {
@@ -64,9 +136,17 @@ export default function CameraScreen() {
       <StatusBar style="light" />
       
       <CameraView
+        ref={cameraRef}
         style={StyleSheet.absoluteFill}
         facing={facing}
       />
+
+      {isRecording && (
+        <View style={styles.recordingIndicator}>
+          <View style={styles.recordingDot} />
+          <Text style={styles.recordingText}>Recording...</Text>
+        </View>
+      )}
 
       <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
         <X size={24} color={colors.card} />
@@ -83,6 +163,8 @@ export default function CameraScreen() {
       ) : (
         <CameraControls
           onCapture={handleCapture}
+          onStartRecording={handleStartRecording}
+          onStopRecording={handleStopRecording}
           onFlip={handleFlip}
           onFilterToggle={handleFilterToggle}
           isRecording={isRecording}
@@ -135,5 +217,26 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+  },
+  recordingIndicator: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  recordingDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.danger,
+  },
+  recordingText: {
+    color: colors.card,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -1,10 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Pressable } from 'react-native';
 import { Image } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 
 interface CameraControlsProps {
   onCapture: () => void;
+  onStartRecording: () => void;
+  onStopRecording: () => void;
   onFlip: () => void;
   onFilterToggle: () => void;
   isRecording: boolean;
@@ -12,6 +14,8 @@ interface CameraControlsProps {
 
 export const CameraControls: React.FC<CameraControlsProps> = ({
   onCapture,
+  onStartRecording,
+  onStopRecording,
   onFlip,
   onFilterToggle,
   isRecording,
@@ -30,13 +34,15 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
       </View>
       
       <View style={styles.bottomControls}>
-        <TouchableOpacity 
+        <Pressable 
           style={[styles.captureButton, isRecording && styles.recordingButton]} 
           onPress={onCapture}
-          activeOpacity={0.8}
+          onLongPress={onStartRecording}
+          onPressOut={isRecording ? onStopRecording : undefined}
+          delayLongPress={200}
         >
           {isRecording && <View style={styles.recordingIndicator} />}
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </View>
   );
