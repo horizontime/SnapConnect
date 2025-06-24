@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Keyboard
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { useChatStore } from '@/store/chatStore';
 import { useFriendStore } from '@/store/friendStore';
+import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/Avatar';
 import { formatTimestamp } from '@/utils/timeUtils';
@@ -15,6 +16,7 @@ export default function ChatScreen() {
   const router = useRouter();
   const { messages, sendMessage, markChatAsRead, currentChatId, setCurrentChatId, fetchMessages } = useChatStore();
   const { getFriendById } = useFriendStore();
+  const { userId: authUserId } = useAuthStore();
   
   const [text, setText] = useState('');
   const flatListRef = useRef<FlatList>(null);
@@ -39,7 +41,7 @@ export default function ChatScreen() {
     if (!text.trim()) return;
     
     sendMessage(id, {
-      senderId: 'me', // In a real app, this would be the current user's ID
+      senderId: authUserId!,
       type: 'text',
       content: text,
     });
@@ -52,7 +54,7 @@ export default function ChatScreen() {
   };
   
   const renderMessage = ({ item }: { item: Message }) => {
-    const isMe = item.senderId === 'me';
+    const isMe = item.senderId === authUserId;
     
     return (
       <View style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage]}>
