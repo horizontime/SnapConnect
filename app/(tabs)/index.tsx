@@ -88,7 +88,8 @@ export default function ChatsScreen() {
       user: f,
     }));
 
-  const displayChats = [...chatsWithUserData, ...friendChats];
+  const textChats = chatsWithUserData.filter(c => c.lastMessage.type === 'text');
+  const displayChats = [...textChats, ...friendChats];
 
   const snaps = chatsWithUserData.filter(c => c.lastMessage.type !== 'text');
 
