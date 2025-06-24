@@ -12,7 +12,10 @@ export default function StoriesScreen() {
   const { userId } = useAuthStore();
   const { getFriendsStories, fetchStories } = useStoryStore();
   
-  const friendsStories = userId ? getFriendsStories(userId) : [];
+  // Only include stories that contain at least one item to avoid runtime errors
+  const friendsStories = userId
+    ? getFriendsStories(userId).filter((story) => story.items && story.items.length > 0)
+    : [];
   
   useEffect(() => {
     fetchStories();
@@ -27,43 +30,49 @@ export default function StoriesScreen() {
       <FlatList
         data={friendsStories}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity 
-            style={styles.storyCard}
-            onPress={() => navigateToStory(item.id)}
-            activeOpacity={0.8}
-          >
-            <View style={styles.storyHeader}>
-              <Avatar 
-                source={item.user.avatar} 
-                size={40} 
-                showOnlineBadge={true}
-                isOnline={item.user.isOnline}
-              />
-              <View style={styles.storyInfo}>
-                <Text style={styles.username}>{item.user.displayName}</Text>
-                <Text style={styles.timestamp}>
-                  {formatStoryTimestamp(item.lastUpdated)}
-                </Text>
-              </View>
-            </View>
-            
-            <View style={styles.storyPreview}>
-              <Image
-                source={{ uri: item.items[0].url }}
-                style={styles.previewImage}
-                resizeMode="cover"
-              />
-              {item.items[0].caption && (
-                <View style={styles.captionContainer}>
-                  <Text style={styles.caption} numberOfLines={2}>
-                    {item.items[0].caption}
+        renderItem={({ item }) => {
+          // Safeguard against stories that somehow passed the filter but still have no items
+          const firstItem = item.items?.[0];
+          if (!firstItem) return null;
+
+          return (
+            <TouchableOpacity
+              style={styles.storyCard}
+              onPress={() => navigateToStory(item.id)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.storyHeader}>
+                <Avatar
+                  source={item.user.avatar}
+                  size={40}
+                  showOnlineBadge={true}
+                  isOnline={item.user.isOnline}
+                />
+                <View style={styles.storyInfo}>
+                  <Text style={styles.username}>{item.user.displayName}</Text>
+                  <Text style={styles.timestamp}>
+                    {formatStoryTimestamp(item.lastUpdated)}
                   </Text>
                 </View>
-              )}
-            </View>
-          </TouchableOpacity>
-        )}
+              </View>
+
+              <View style={styles.storyPreview}>
+                <Image
+                  source={{ uri: firstItem.url }}
+                  style={styles.previewImage}
+                  resizeMode="cover"
+                />
+                {firstItem.caption && (
+                  <View style={styles.captionContainer}>
+                    <Text style={styles.caption} numberOfLines={2}>
+                      {firstItem.caption}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+          );
+        }}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={() => (
