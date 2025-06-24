@@ -150,6 +150,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       isRead: false,
     };
 
+    console.log('[ChatStore] Message sent, adding to local state:', newMessage.id);
+
     set(state => {
       const updatedChats = state.chats.map(chat => {
         if (chat.id === chatId) {
@@ -167,10 +169,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
         return chat;
       });
 
+      const existing = state.messages[chatId] || [];
+      // avoid adding duplicate message (can happen because we optimistically add right after INSERT)
+      const alreadyExists = existing.some(m => m.id === newMessage.id);
+      if (alreadyExists) {
+        console.log('[ChatStore] Duplicate message from realtime, ignoring:', newMessage.id);
+        return {
+          chats: updatedChats,
+        };
+      }
+
+      console.log('[ChatStore] Adding message from realtime:', newMessage.id);
+
       return {
         messages: {
           ...state.messages,
-          [chatId]: [...(state.messages[chatId] || []), newMessage],
+          [chatId]: [...existing, newMessage],
         },
         chats: updatedChats,
       };
@@ -267,7 +281,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
           const existing = state.messages[chatId] || [];
           // avoid adding duplicate message (can happen because we optimistically add right after INSERT)
           const alreadyExists = existing.some(m => m.id === newMsg.id);
-          if (alreadyExists) return state;
+          if (alreadyExists) {
+            console.log('[ChatStore] Duplicate message from realtime, ignoring:', newMsg.id);
+            return state;
+          }
+
+          console.log('[ChatStore] Adding message from realtime:', newMsg.id);
 
           return {
             messages: {
