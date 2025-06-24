@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { mockUsers } from '@/constants/mockData';
 import { User } from '@/types';
+import { supabase } from '@/utils/supabase';
+import { useAuthStore } from '@/store/authStore';
 
 type FriendState = {
   friends: User[];
@@ -8,10 +9,11 @@ type FriendState = {
   removeFriend: (friendId: string) => void;
   getFriendById: (friendId: string) => User | undefined;
   searchFriends: (query: string) => User[];
+  fetchFriends: () => Promise<void>;
 };
 
 export const useFriendStore = create<FriendState>((set, get) => ({
-  friends: mockUsers,
+  friends: [],
   
   addFriend: (friend) => set(state => ({
     friends: [...state.friends, friend]
@@ -32,5 +34,45 @@ export const useFriendStore = create<FriendState>((set, get) => ({
         friend.username.toLowerCase().includes(lowerQuery) || 
         friend.displayName.toLowerCase().includes(lowerQuery)
     );
+  },
+  
+  fetchFriends: async () => {
+    const { userId } = useAuthStore.getState();
+    if (!userId) return;
+
+    try {
+      const { data: rows, error } = await supabase
+        .from('friends')
+        .select('friend_id')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      const friendIds = (rows || []).map((r: any) => r.friend_id);
+
+      if (friendIds.length === 0) {
+        set({ friends: [] });
+        return;
+      }
+
+      const { data: profiles, error: pErr } = await supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .in('id', friendIds);
+
+      if (pErr) throw pErr;
+
+      const mapped: User[] = (profiles || []).map((p: any) => ({
+        id: p.id,
+        username: p.username,
+        displayName: p.display_name || p.username,
+        avatar: p.avatar_url,
+        isOnline: false,
+      }));
+
+      set({ friends: mapped });
+    } catch (err: any) {
+      console.error('[FriendStore] fetchFriends', err.message);
+    }
   },
 }));

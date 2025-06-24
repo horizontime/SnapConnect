@@ -26,7 +26,7 @@ export default function ChatsScreen() {
   const { userId } = useAuthStore();
   const { getChatsWithUserData, fetchChats } = useChatStore();
   const { getStoriesWithUserData, getMyStories } = useStoryStore();
-  const { friends } = useFriendStore();
+  const { friends, fetchFriends } = useFriendStore();
   const [view, setView] = useState<'chats' | 'friends'>('chats');
   
   const chatsWithUserData = getChatsWithUserData();
@@ -73,7 +73,14 @@ export default function ChatsScreen() {
   // Load chats once on mount
   useEffect(() => {
     fetchChats();
+    fetchFriends();
   }, []);
+
+  useEffect(() => {
+    if (view === 'friends') {
+      fetchFriends();
+    }
+  }, [view]);
 
   const storyListData: StoryListItem[] = [
     { id: 'my-story', isCurrentUser: true },
@@ -88,6 +95,23 @@ export default function ChatsScreen() {
         userId: story.userId,
       })),
   ];
+
+  const friendChats = friends
+    .filter(f => !chatsWithUserData.some(c => c.user.id === f.id))
+    .map(f => ({
+      id: `friend-${f.id}`,
+      userId: f.id,
+      lastMessage: {
+        type: 'text' as const,
+        content: 'Say hi!',
+        timestamp: new Date().toISOString(),
+        isRead: true,
+      },
+      unreadCount: 0,
+      user: f,
+    }));
+
+  const displayChats = [...chatsWithUserData, ...friendChats];
 
   return (
     <View style={styles.container}>
@@ -108,7 +132,7 @@ export default function ChatsScreen() {
 
       {view === 'chats' ? (
         <FlatList
-          data={chatsWithUserData}
+          data={displayChats}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <ChatListItem
