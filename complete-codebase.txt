@@ -1,0 +1,3355 @@
+# SnapConnect - Complete Codebase Export
+
+## package.json
+```json
+{
+  "name": "expo-app",
+  "main": "expo-router/entry",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "bunx rork start -p fn0jq43paqve7tg0sqkt9 --tunnel",
+    "start-web": "bunx rork start -p fn0jq43paqve7tg0sqkt9 --web --tunnel",
+    "start-web-dev": "DEBUG=expo* bunx rork start -p fn0jq43paqve7tg0sqkt9 --web --tunnel"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^14.1.0",
+    "@react-native-async-storage/async-storage": "2.1.2",
+    "@react-navigation/native": "^7.1.6",
+    "expo": "^53.0.4",
+    "expo-blur": "~14.1.4",
+    "expo-camera": "~16.1.8",
+    "expo-constants": "~17.1.4",
+    "expo-font": "~13.3.0",
+    "expo-haptics": "~14.1.4",
+    "expo-image": "~2.3.0",
+    "expo-image-picker": "~16.1.4",
+    "expo-linear-gradient": "~14.1.5",
+    "expo-linking": "~7.1.4",
+    "expo-location": "~18.1.4",
+    "expo-router": "~5.0.3",
+    "expo-splash-screen": "~0.30.7",
+    "expo-status-bar": "~2.2.3",
+    "expo-symbols": "~0.4.4",
+    "expo-system-ui": "~5.0.6",
+    "expo-web-browser": "~14.1.6",
+    "lucide-react-native": "^0.475.0",
+    "nativewind": "^4.1.23",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "react-native": "0.79.1",
+    "react-native-gesture-handler": "~2.24.0",
+    "react-native-safe-area-context": "5.3.0",
+    "react-native-screens": "~4.10.0",
+    "react-native-svg": "15.11.2",
+    "react-native-web": "^0.20.0",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@expo/ngrok": "^4.1.0",
+    "@types/react": "~19.0.10",
+    "typescript": "~5.8.3"
+  },
+  "private": true
+}
+```
+
+## app/_layout.tsx
+```tsx
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { useFonts } from "expo-font";
+import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { useEffect } from "react";
+import { colors } from "@/constants/colors";
+
+export const unstable_settings = {
+  initialRouteName: "(tabs)",
+};
+
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync();
+
+export default function RootLayout() {
+  const [loaded, error] = useFonts({
+    ...FontAwesome.font,
+  });
+
+  useEffect(() => {
+    if (error) {
+      console.error(error);
+      throw error;
+    }
+  }, [error]);
+
+  useEffect(() => {
+    if (loaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded]);
+
+  if (!loaded) {
+    return null;
+  }
+
+  return <RootLayoutNav />;
+}
+
+function RootLayoutNav() {
+  return (
+    <Stack
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: colors.card,
+        },
+        headerTintColor: colors.text,
+        headerTitleStyle: {
+          fontWeight: '600',
+        },
+        headerShadowVisible: false,
+      }}
+    >
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/login" options={{ headerShown: true }} />
+      <Stack.Screen name="auth/signup" options={{ headerShown: true }} />
+      <Stack.Screen name="chat/[id]" options={{ headerShown: true }} />
+      <Stack.Screen name="story/[id]" options={{ headerShown: false, animation: 'fade' }} />
+    </Stack>
+  );
+}
+```
+
+## app/index.tsx
+```tsx
+import { useEffect, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { Redirect } from 'expo-router';
+import { useAuthStore } from '@/store/authStore';
+import { colors } from '@/constants/colors';
+
+export default function Index() {
+  const { isAuthenticated } = useAuthStore();
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    // Give the auth store time to rehydrate from AsyncStorage
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>SnapConnect</Text>
+      </View>
+    );
+  }
+  
+  if (isAuthenticated) {
+    return <Redirect href="/(tabs)" />;
+  }
+  
+  return <Redirect href="/auth/login" />;
+}
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+  },
+  loadingText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+});
+```
+
+## app/+not-found.tsx
+```tsx
+import { Link, Stack } from "expo-router";
+import { StyleSheet, Text, View } from "react-native";
+
+export default function NotFoundScreen() {
+  return (
+    <>
+      <Stack.Screen options={{ title: "Oops!" }} />
+      <View style={styles.container}>
+        <Text style={styles.title}>This screen doesn't exist.</Text>
+
+        <Link href="/" style={styles.link}>
+          <Text style={styles.linkText}>Go to home screen!</Text>
+        </Link>
+      </View>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  link: {
+    marginTop: 15,
+    paddingVertical: 15,
+  },
+  linkText: {
+    fontSize: 14,
+    color: "#2e78b7",
+  },
+});
+```
+
+## app/modal.tsx
+```tsx
+import { StatusBar } from "expo-status-bar";
+import { Platform, StyleSheet, Text, View } from "react-native";
+
+export default function ModalScreen() {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Modal</Text>
+      <View style={styles.separator} />
+      <Text>This is an example modal. You can edit it in app/modal.tsx.</Text>
+
+      {/* Use a light status bar on iOS to account for the black space above the modal */}
+      <StatusBar style={Platform.OS === "ios" ? "light" : "auto"} />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  separator: {
+    marginVertical: 30,
+    height: 1,
+    width: "80%",
+  },
+});
+```
+
+## app/(tabs)/_layout.tsx
+```tsx
+import React from 'react';
+import { Tabs } from 'expo-router';
+import { Camera, MessageSquare, Users, User } from 'lucide-react-native';
+import { colors } from '@/constants/colors';
+import { TouchableOpacity, StyleSheet } from 'react-native';
+import { useAuthStore } from '@/store/authStore';
+
+export default function TabLayout() {
+  const { isAuthenticated } = useAuthStore();
+
+  return (
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textLight,
+        tabBarShowLabel: false,
+        tabBarStyle: styles.tabBar,
+        headerStyle: styles.header,
+        headerTitleStyle: styles.headerTitle,
+        headerShadowVisible: false,
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Chats',
+          tabBarIcon: ({ color, size }) => (
+            <MessageSquare size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="camera"
+        options={{
+          title: 'Camera',
+          tabBarIcon: ({ color, size }) => (
+            <Camera size={size} color={color} />
+          ),
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="stories"
+        options={{
+          title: 'Stories',
+          tabBarIcon: ({ color, size }) => (
+            <Users size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => (
+            <User size={size} color={color} />
+          ),
+        }}
+      />
+    </Tabs>
+  );
+}
+
+const styles = StyleSheet.create({
+  tabBar: {
+    backgroundColor: colors.card,
+    borderTopColor: colors.border,
+    height: 60,
+  },
+  header: {
+    backgroundColor: colors.card,
+  },
+  headerTitle: {
+    color: colors.text,
+    fontWeight: '600',
+  },
+});
+```
+
+## app/(tabs)/index.tsx
+```tsx
+import React, { useEffect } from 'react';
+import { View, StyleSheet, FlatList, Text } from 'react-native';
+import { useChatStore } from '@/store/chatStore';
+import { ChatListItem } from '@/components/chat/ChatListItem';
+import { colors } from '@/constants/colors';
+import { useRouter } from 'expo-router';
+import { StoryThumbnail } from '@/components/story/StoryThumbnail';
+import { useStoryStore } from '@/store/storyStore';
+import { useAuthStore } from '@/store/authStore';
+
+type StoryListItem = {
+  id: string;
+  isCurrentUser?: boolean;
+  username?: string;
+  avatar?: string;
+  hasStory?: boolean;
+  viewed?: boolean;
+  userId?: string;
+};
+
+export default function ChatsScreen() {
+  const router = useRouter();
+  const { userId } = useAuthStore();
+  const { getChatsWithUserData } = useChatStore();
+  const { getStoriesWithUserData, getMyStories } = useStoryStore();
+  
+  const chatsWithUserData = getChatsWithUserData();
+  const storiesWithUserData = getStoriesWithUserData();
+  const myStories = userId ? getMyStories(userId) : [];
+  
+  const navigateToChat = (chatId: string, userId: string) => {
+    router.push(`/chat/${chatId}?userId=${userId}`);
+  };
+  
+  const navigateToStory = (storyId: string) => {
+    router.push(`/story/${storyId}`);
+  };
+  
+  const navigateToCamera = () => {
+    router.push('/(tabs)/camera');
+  };
+
+  const storyListData: StoryListItem[] = [
+    { id: 'my-story', isCurrentUser: true },
+    ...storiesWithUserData
+      .filter(story => story.userId !== userId)
+      .map(story => ({
+        id: story.id,
+        username: story.user.username,
+        avatar: story.user.avatar,
+        hasStory: true,
+        viewed: story.viewed,
+        userId: story.userId,
+      })),
+  ];
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={chatsWithUserData}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <ChatListItem
+            id={item.id}
+            username={item.user.username}
+            displayName={item.user.displayName}
+            avatar={item.user.avatar}
+            lastMessage={item.lastMessage}
+            unreadCount={item.unreadCount}
+            isOnline={item.user.isOnline}
+            onPress={() => navigateToChat(item.id, item.user.id)}
+          />
+        )}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        ListHeaderComponent={() => (
+          <View style={styles.storiesContainer}>
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={storyListData}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => {
+                if (item.isCurrentUser) {
+                  const hasMyStory = myStories.length > 0;
+                  return (
+                    <StoryThumbnail
+                      id="my-story"
+                      username="Your Story"
+                      avatar={userId ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80' : ''}
+                      hasStory={hasMyStory}
+                      isViewed={false}
+                      isCurrentUser={true}
+                      onPress={hasMyStory ? () => navigateToStory(myStories[0].id) : navigateToCamera}
+                    />
+                  );
+                }
+                
+                return (
+                  <StoryThumbnail
+                    id={item.id}
+                    username={item.username || 'User'}
+                    avatar={item.avatar || ''}
+                    hasStory={item.hasStory || false}
+                    isViewed={item.viewed || false}
+                    onPress={() => navigateToStory(item.id)}
+                  />
+                );
+              }}
+              contentContainerStyle={styles.storiesList}
+            />
+          </View>
+        )}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No chats yet</Text>
+            <Text style={styles.emptySubtext}>Start a conversation with a friend</Text>
+          </View>
+        )}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginLeft: 78,
+  },
+  storiesContainer: {
+    backgroundColor: colors.card,
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  storiesList: {
+    paddingHorizontal: 8,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    marginTop: 100,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: colors.textLight,
+    textAlign: 'center',
+  },
+});
+```
+
+## app/(tabs)/camera.tsx
+```tsx
+import React, { useState, useRef } from 'react';
+import { View, StyleSheet, TouchableOpacity, Text, Platform } from 'react-native';
+import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { CameraControls } from '@/components/camera/CameraControls';
+import { FilterSelector } from '@/components/camera/FilterSelector';
+import { colors } from '@/constants/colors';
+import { mockFilters } from '@/constants/mockData';
+import { X } from 'lucide-react-native';
+
+export default function CameraScreen() {
+  const router = useRouter();
+  const [permission, requestPermission] = useCameraPermissions();
+  const [facing, setFacing] = useState<CameraType>('back');
+  const [isRecording, setIsRecording] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
+  
+  const cameraRef = useRef(null);
+  
+  if (!permission) {
+    // Camera permissions are still loading
+    return <View style={styles.container} />;
+  }
+  
+  if (!permission.granted) {
+    // Camera permissions are not granted yet
+    return (
+      <View style={styles.permissionContainer}>
+        <Text style={styles.permissionText}>We need your permission to show the camera</Text>
+        <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
+          <Text style={styles.permissionButtonText}>Grant Permission</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  
+  const handleCapture = async () => {
+    // In a real app, this would capture a photo or video
+    // For now, we'll just simulate it
+    console.log('Capturing...');
+    
+    // Navigate to preview screen (would be implemented in a real app)
+    // router.push('/preview');
+  };
+  
+  const handleFlip = () => {
+    setFacing(current => (current === 'back' ? 'front' : 'back'));
+  };
+  
+  const handleFilterToggle = () => {
+    setShowFilters(prev => !prev);
+  };
+  
+  const handleSelectFilter = (filterId: string | null) => {
+    setSelectedFilter(filterId);
+  };
+  
+  const handleClose = () => {
+    router.back();
+  };
+  
+  return (
+    <View style={styles.container}>
+      <StatusBar style="light" />
+      
+      <CameraView
+        style={styles.camera}
+        facing={facing}
+      >
+        <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+          <X size={24} color={colors.card} />
+        </TouchableOpacity>
+        
+        {showFilters ? (
+          <View style={styles.filtersContainer}>
+            <FilterSelector
+              filters={mockFilters}
+              selectedFilter={selectedFilter}
+              onSelectFilter={handleSelectFilter}
+            />
+          </View>
+        ) : (
+          <CameraControls
+            onCapture={handleCapture}
+            onFlip={handleFlip}
+            onFilterToggle={handleFilterToggle}
+            isRecording={isRecording}
+          />
+        )}
+      </CameraView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  camera: {
+    flex: 1,
+  },
+  permissionContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: colors.background,
+  },
+  permissionText: {
+    fontSize: 16,
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  permissionButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  permissionButtonText: {
+    color: colors.card,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    left: 20,
+    zIndex: 10,
+  },
+  filtersContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+});
+```
+
+## app/(tabs)/stories.tsx
+```tsx
+import React from 'react';
+import { View, StyleSheet, FlatList, Text, TouchableOpacity, Image } from 'react-native';
+import { useStoryStore } from '@/store/storyStore';
+import { useAuthStore } from '@/store/authStore';
+import { colors } from '@/constants/colors';
+import { useRouter } from 'expo-router';
+import { Avatar } from '@/components/ui/Avatar';
+import { formatStoryTimestamp } from '@/utils/timeUtils';
+
+export default function StoriesScreen() {
+  const router = useRouter();
+  const { userId } = useAuthStore();
+  const { getFriendsStories } = useStoryStore();
+  
+  const friendsStories = userId ? getFriendsStories(userId) : [];
+  
+  const navigateToStory = (storyId: string) => {
+    router.push(`/story/${storyId}`);
+  };
+  
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={friendsStories}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <TouchableOpacity 
+            style={styles.storyCard}
+            onPress={() => navigateToStory(item.id)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.storyHeader}>
+              <Avatar 
+                source={item.user.avatar} 
+                size={40} 
+                showOnlineBadge={true}
+                isOnline={item.user.isOnline}
+              />
+              <View style={styles.storyInfo}>
+                <Text style={styles.username}>{item.user.displayName}</Text>
+                <Text style={styles.timestamp}>
+                  {formatStoryTimestamp(item.lastUpdated)}
+                </Text>
+              </View>
+            </View>
+            
+            <View style={styles.storyPreview}>
+              <Image
+                source={{ uri: item.items[0].url }}
+                style={styles.previewImage}
+                resizeMode="cover"
+              />
+              {item.items[0].caption && (
+                <View style={styles.captionContainer}>
+                  <Text style={styles.caption} numberOfLines={2}>
+                    {item.items[0].caption}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+        )}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        contentContainerStyle={styles.listContent}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No stories yet</Text>
+            <Text style={styles.emptySubtext}>Your friends' stories will appear here</Text>
+          </View>
+        )}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  listContent: {
+    padding: 16,
+  },
+  storyCard: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  storyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+  },
+  storyInfo: {
+    marginLeft: 12,
+  },
+  username: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  timestamp: {
+    fontSize: 12,
+    color: colors.textLight,
+    marginTop: 2,
+  },
+  storyPreview: {
+    position: 'relative',
+  },
+  previewImage: {
+    width: '100%',
+    height: 300,
+    backgroundColor: colors.border,
+  },
+  captionContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 12,
+  },
+  caption: {
+    color: colors.card,
+    fontSize: 14,
+  },
+  separator: {
+    height: 16,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    marginTop: 100,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: colors.textLight,
+    textAlign: 'center',
+  },
+});
+```
+
+## app/(tabs)/profile.tsx
+```tsx
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { useAuthStore } from '@/store/authStore';
+import { colors } from '@/constants/colors';
+import { Avatar } from '@/components/ui/Avatar';
+import { Button } from '@/components/ui/Button';
+import { useRouter } from 'expo-router';
+import { Settings, QrCode, UserPlus, LogOut } from 'lucide-react-native';
+
+export default function ProfileScreen() {
+  const router = useRouter();
+  const { isAuthenticated, username, displayName, avatar, logout } = useAuthStore();
+  
+  const handleLogin = () => {
+    router.push('/auth/login');
+  };
+  
+  const handleLogout = () => {
+    logout();
+  };
+  
+  const handleShowQR = () => {
+    // In a real app, this would show the QR code
+    console.log('Show QR code');
+  };
+  
+  const handleAddFriends = () => {
+    // In a real app, this would navigate to add friends screen
+    console.log('Add friends');
+  };
+  
+  const handleSettings = () => {
+    // In a real app, this would navigate to settings screen
+    console.log('Settings');
+  };
+  
+  if (!isAuthenticated) {
+    return (
+      <View style={styles.authContainer}>
+        <Text style={styles.authTitle}>Welcome to SnapConnect</Text>
+        <Text style={styles.authSubtitle}>Connect with fellow woodworkers</Text>
+        <Button 
+          title="Log In" 
+          onPress={handleLogin} 
+          style={styles.authButton}
+        />
+        <Button 
+          title="Sign Up" 
+          onPress={handleLogin} 
+          variant="outline" 
+          style={styles.authButton}
+        />
+      </View>
+    );
+  }
+  
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Avatar 
+          source={avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80'} 
+          size={80} 
+        />
+        <Text style={styles.displayName}>{displayName || 'User'}</Text>
+        <Text style={styles.username}>@{username || 'username'}</Text>
+      </View>
+      
+      <View style={styles.actionsContainer}>
+        <TouchableOpacity style={styles.actionButton} onPress={handleShowQR}>
+          <View style={styles.actionIcon}>
+            <QrCode size={24} color={colors.primary} />
+          </View>
+          <Text style={styles.actionText}>My ShopTag</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.actionButton} onPress={handleAddFriends}>
+          <View style={styles.actionIcon}>
+            <UserPlus size={24} color={colors.primary} />
+          </View>
+          <Text style={styles.actionText}>Add Friends</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.actionButton} onPress={handleSettings}>
+          <View style={styles.actionIcon}>
+            <Settings size={24} color={colors.primary} />
+          </View>
+          <Text style={styles.actionText}>Settings</Text>
+        </TouchableOpacity>
+      </View>
+      
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>About</Text>
+        <Text style={styles.sectionText}>
+          Woodworking enthusiast specializing in hand-cut joinery and traditional techniques.
+        </Text>
+      </View>
+      
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Favorite Woods</Text>
+        <View style={styles.tagsContainer}>
+          <View style={styles.tag}>
+            <Text style={styles.tagText}>Walnut</Text>
+          </View>
+          <View style={styles.tag}>
+            <Text style={styles.tagText}>Cherry</Text>
+          </View>
+          <View style={styles.tag}>
+            <Text style={styles.tagText}>Maple</Text>
+          </View>
+        </View>
+      </View>
+      
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Favorite Tools</Text>
+        <View style={styles.tagsContainer}>
+          <View style={styles.tag}>
+            <Text style={styles.tagText}>Chisels</Text>
+          </View>
+          <View style={styles.tag}>
+            <Text style={styles.tagText}>Hand Planes</Text>
+          </View>
+          <View style={styles.tag}>
+            <Text style={styles.tagText}>Japanese Saws</Text>
+          </View>
+        </View>
+      </View>
+      
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <LogOut size={20} color={colors.danger} />
+        <Text style={styles.logoutText}>Log Out</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  header: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    backgroundColor: colors.card,
+  },
+  displayName: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: colors.text,
+    marginTop: 12,
+  },
+  username: {
+    fontSize: 14,
+    color: colors.textLight,
+    marginTop: 4,
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 16,
+    backgroundColor: colors.card,
+    marginTop: 1,
+  },
+  actionButton: {
+    alignItems: 'center',
+  },
+  actionIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  actionText: {
+    fontSize: 12,
+    color: colors.text,
+  },
+  section: {
+    backgroundColor: colors.card,
+    padding: 16,
+    marginTop: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  sectionText: {
+    fontSize: 14,
+    color: colors.textLight,
+    lineHeight: 20,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 4,
+  },
+  tag: {
+    backgroundColor: colors.background,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  tagText: {
+    fontSize: 12,
+    color: colors.text,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    marginTop: 24,
+    marginBottom: 40,
+  },
+  logoutText: {
+    fontSize: 16,
+    color: colors.danger,
+    marginLeft: 8,
+  },
+  authContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: colors.background,
+  },
+  authTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  authSubtitle: {
+    fontSize: 16,
+    color: colors.textLight,
+    marginBottom: 32,
+    textAlign: 'center',
+  },
+  authButton: {
+    width: '80%',
+    marginBottom: 16,
+  },
+});
+```
+
+## app/auth/login.tsx
+```tsx
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image } from 'react-native';
+import { useAuthStore } from '@/store/authStore';
+import { colors } from '@/constants/colors';
+import { Button } from '@/components/ui/Button';
+import { useRouter } from 'expo-router';
+import { mockUsers } from '@/constants/mockData';
+import { Stack } from 'expo-router';
+
+export default function LoginScreen() {
+  const router = useRouter();
+  const { login } = useAuthStore();
+  
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const handleLogin = () => {
+    setIsLoading(true);
+    setError('');
+    
+    // Simulate API call
+    setTimeout(() => {
+      // Find user by username (in a real app, this would be a server call)
+      const user = mockUsers.find(u => u.username.toLowerCase() === username.toLowerCase());
+      
+      if (user && password.length > 0) {
+        login(user.id, user.username, user.displayName, user.avatar);
+        router.replace('/(tabs)');
+      } else {
+        setError('Invalid username or password');
+      }
+      
+      setIsLoading(false);
+    }, 1000);
+  };
+  
+  const handleSignUp = () => {
+    router.push('/auth/signup');
+  };
+  
+  return (
+    <>
+      <Stack.Screen options={{ title: 'Log In', headerBackTitle: 'Back' }} />
+      <View style={styles.container}>
+        <View style={styles.logoContainer}>
+          <Image
+            source={{ uri: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80' }}
+            style={styles.logo}
+            resizeMode="cover"
+          />
+          <Text style={styles.title}>SnapConnect</Text>
+          <Text style={styles.subtitle}>For Woodworkers</Text>
+        </View>
+        
+        <View style={styles.formContainer}>
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          
+          <TextInput
+            style={styles.input}
+            placeholder="Username"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+          
+          <Button
+            title="Log In"
+            onPress={handleLogin}
+            loading={isLoading}
+            disabled={!username || !password}
+            style={styles.button}
+            fullWidth
+          />
+          
+          <TouchableOpacity style={styles.forgotPassword}>
+            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Don't have an account?</Text>
+          <TouchableOpacity onPress={handleSignUp}>
+            <Text style={styles.signUpText}>Sign Up</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <Text style={styles.hint}>
+          Hint: Try username "woodmaster" with any password
+        </Text>
+      </View>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    padding: 20,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginTop: 40,
+    marginBottom: 40,
+  },
+  logo: {
+    width: 100,
+    height: 100,
+    borderRadius: 20,
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: colors.textLight,
+    marginTop: 4,
+  },
+  formContainer: {
+    marginBottom: 24,
+  },
+  input: {
+    backgroundColor: colors.card,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  button: {
+    marginTop: 8,
+  },
+  forgotPassword: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  forgotPasswordText: {
+    color: colors.primary,
+    fontSize: 14,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 16,
+  },
+  footerText: {
+    color: colors.textLight,
+    fontSize: 14,
+  },
+  signUpText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  errorText: {
+    color: colors.danger,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  hint: {
+    color: colors.textLight,
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 40,
+    fontStyle: 'italic',
+  },
+});
+```
+
+## app/auth/signup.tsx
+```tsx
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image } from 'react-native';
+import { useAuthStore } from '@/store/authStore';
+import { colors } from '@/constants/colors';
+import { Button } from '@/components/ui/Button';
+import { useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
+
+export default function SignupScreen() {
+  const router = useRouter();
+  const { login } = useAuthStore();
+  
+  const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const handleSignUp = () => {
+    setIsLoading(true);
+    setError('');
+    
+    // Simulate API call
+    setTimeout(() => {
+      if (displayName && username && password) {
+        // In a real app, this would create a user on the server
+        const newUserId = Date.now().toString();
+        login(
+          newUserId, 
+          username, 
+          displayName, 
+          'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80'
+        );
+        router.replace('/(tabs)');
+      } else {
+        setError('Please fill in all fields');
+      }
+      
+      setIsLoading(false);
+    }, 1000);
+  };
+  
+  const handleLogin = () => {
+    router.push('/auth/login');
+  };
+  
+  return (
+    <>
+      <Stack.Screen options={{ title: 'Sign Up', headerBackTitle: 'Back' }} />
+      <View style={styles.container}>
+        <View style={styles.logoContainer}>
+          <Image
+            source={{ uri: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80' }}
+            style={styles.logo}
+            resizeMode="cover"
+          />
+          <Text style={styles.title}>SnapConnect</Text>
+          <Text style={styles.subtitle}>Join the woodworking community</Text>
+        </View>
+        
+        <View style={styles.formContainer}>
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          
+          <TextInput
+            style={styles.input}
+            placeholder="Full Name"
+            value={displayName}
+            onChangeText={setDisplayName}
+            autoCorrect={false}
+          />
+          
+          <TextInput
+            style={styles.input}
+            placeholder="Username"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+          
+          <Button
+            title="Sign Up"
+            onPress={handleSignUp}
+            loading={isLoading}
+            disabled={!displayName || !username || !password}
+            style={styles.button}
+            fullWidth
+          />
+        </View>
+        
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Already have an account?</Text>
+          <TouchableOpacity onPress={handleLogin}>
+            <Text style={styles.loginText}>Log In</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <Text style={styles.termsText}>
+          By signing up, you agree to our Terms of Service and Privacy Policy
+        </Text>
+      </View>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    padding: 20,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 30,
+  },
+  logo: {
+    width: 80,
+    height: 80,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: colors.textLight,
+    marginTop: 4,
+  },
+  formContainer: {
+    marginBottom: 24,
+  },
+  input: {
+    backgroundColor: colors.card,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  button: {
+    marginTop: 8,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 16,
+  },
+  footerText: {
+    color: colors.textLight,
+    fontSize: 14,
+  },
+  loginText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  errorText: {
+    color: colors.danger,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  termsText: {
+    color: colors.textLight,
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 40,
+  },
+});
+```
+
+## app/chat/[id].tsx
+```tsx
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
+import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
+import { useChatStore } from '@/store/chatStore';
+import { useFriendStore } from '@/store/friendStore';
+import { colors } from '@/constants/colors';
+import { Avatar } from '@/components/ui/Avatar';
+import { formatTimestamp } from '@/utils/timeUtils';
+import { Camera, Send } from 'lucide-react-native';
+import { Message } from '@/types';
+
+export default function ChatScreen() {
+  const { id, userId } = useLocalSearchParams<{ id: string; userId: string }>();
+  const router = useRouter();
+  const { messages, sendMessage, markChatAsRead, currentChatId, setCurrentChatId } = useChatStore();
+  const { getFriendById } = useFriendStore();
+  
+  const [text, setText] = useState('');
+  const flatListRef = useRef<FlatList>(null);
+  
+  const friend = getFriendById(userId);
+  const chatMessages = messages[id] || [];
+  
+  useEffect(() => {
+    if (id) {
+      setCurrentChatId(id);
+      markChatAsRead(id);
+    }
+    
+    return () => {
+      setCurrentChatId(null);
+    };
+  }, [id]);
+  
+  const handleSend = () => {
+    if (!text.trim()) return;
+    
+    sendMessage(id, {
+      senderId: 'me', // In a real app, this would be the current user's ID
+      type: 'text',
+      content: text,
+    });
+    
+    setText('');
+  };
+  
+  const handleCamera = () => {
+    router.push('/(tabs)/camera');
+  };
+  
+  const renderMessage = ({ item }: { item: Message }) => {
+    const isMe = item.senderId === 'me';
+    
+    return (
+      <View style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage]}>
+        {item.type === 'text' ? (
+          <View style={[styles.textBubble, isMe ? styles.myBubble : styles.theirBubble]}>
+            <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.theirMessageText]}>
+              {item.content}
+            </Text>
+          </View>
+        ) : (
+          <View style={[styles.mediaBubble, isMe ? styles.myBubble : styles.theirBubble]}>
+            {item.isExpired ? (
+              <Text style={styles.expiredText}>Snap expired</Text>
+            ) : (
+              <View style={styles.mediaContent}>
+                <Text style={styles.mediaText}>
+                  {item.type === 'image' ? '📷 Photo' : '🎥 Video'}
+                </Text>
+                <Text style={styles.tapToView}>Tap to view</Text>
+              </View>
+            )}
+          </View>
+        )}
+        <Text style={[styles.timestamp, isMe ? styles.myTimestamp : styles.theirTimestamp]}>
+          {formatTimestamp(item.timestamp)}
+        </Text>
+      </View>
+    );
+  };
+  
+  return (
+    <>
+      {friend && (
+        <Stack.Screen
+          options={{
+            title: friend.displayName,
+            headerRight: () => (
+              <Avatar
+                source={friend.avatar}
+                size={32}
+                showOnlineBadge
+                isOnline={friend.isOnline}
+                style={{ marginRight: 16 }}
+              />
+            ),
+          }}
+        />
+      )}
+      
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <FlatList
+          ref={flatListRef}
+          data={chatMessages}
+          keyExtractor={(item) => item.id}
+          renderItem={renderMessage}
+          contentContainerStyle={styles.messagesContainer}
+          onContentSizeChange={() => {
+            if (chatMessages.length > 0) {
+              flatListRef.current?.scrollToEnd({ animated: true });
+            }
+          }}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No messages yet</Text>
+              <Text style={styles.emptySubtext}>Send a message to start the conversation</Text>
+            </View>
+          )}
+        />
+        
+        <View style={styles.inputContainer}>
+          <TouchableOpacity style={styles.cameraButton} onPress={handleCamera}>
+            <Camera size={24} color={colors.primary} />
+          </TouchableOpacity>
+          
+          <TextInput
+            style={styles.input}
+            placeholder="Message"
+            value={text}
+            onChangeText={setText}
+            multiline
+          />
+          
+          <TouchableOpacity 
+            style={[styles.sendButton, !text.trim() && styles.disabledSendButton]} 
+            onPress={handleSend}
+            disabled={!text.trim()}
+          >
+            <Send size={20} color={text.trim() ? colors.card : colors.inactive} />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  messagesContainer: {
+    padding: 16,
+    paddingBottom: 8,
+  },
+  messageContainer: {
+    marginBottom: 16,
+    maxWidth: '80%',
+  },
+  myMessage: {
+    alignSelf: 'flex-end',
+  },
+  theirMessage: {
+    alignSelf: 'flex-start',
+  },
+  textBubble: {
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  mediaBubble: {
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minHeight: 60,
+    justifyContent: 'center',
+  },
+  myBubble: {
+    backgroundColor: colors.primary,
+  },
+  theirBubble: {
+    backgroundColor: colors.card,
+  },
+  messageText: {
+    fontSize: 16,
+  },
+  myMessageText: {
+    color: colors.card,
+  },
+  theirMessageText: {
+    color: colors.text,
+  },
+  mediaContent: {
+    alignItems: 'center',
+  },
+  mediaText: {
+    fontSize: 16,
+    color: colors.card,
+    marginBottom: 4,
+  },
+  tapToView: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  expiredText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  timestamp: {
+    fontSize: 10,
+    marginTop: 4,
+  },
+  myTimestamp: {
+    color: colors.textLight,
+    textAlign: 'right',
+  },
+  theirTimestamp: {
+    color: colors.textLight,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    backgroundColor: colors.card,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  cameraButton: {
+    padding: 8,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    maxHeight: 100,
+    marginHorizontal: 8,
+  },
+  sendButton: {
+    backgroundColor: colors.primary,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  disabledSendButton: {
+    backgroundColor: colors.border,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    marginTop: 100,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: colors.textLight,
+    textAlign: 'center',
+  },
+});
+```
+
+## app/story/[id].tsx
+```tsx
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Platform } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useStoryStore } from '@/store/storyStore';
+import { useFriendStore } from '@/store/friendStore';
+import { Image } from 'expo-image';
+import { colors } from '@/constants/colors';
+import { Avatar } from '@/components/ui/Avatar';
+import { formatStoryTimestamp } from '@/utils/timeUtils';
+import { X, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { StatusBar } from 'expo-status-bar';
+
+const { width, height } = Dimensions.get('window');
+
+export default function StoryScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const { getStoriesWithUserData, setCurrentStory, markStoryAsViewed, currentStoryId, currentStoryItemIndex } = useStoryStore();
+  const { getFriendById } = useFriendStore();
+  
+  const [progress, setProgress] = useState(0);
+  const progressInterval = useRef<NodeJS.Timeout | null>(null);
+  const storyDuration = 5000; // 5 seconds per story
+  
+  const storiesWithUserData = getStoriesWithUserData();
+  const story = storiesWithUserData.find(s => s.id === id);
+  const storyItems = story?.items || [];
+  const currentItem = storyItems[currentStoryItemIndex];
+  const user = story?.user;
+  
+  useEffect(() => {
+    if (id) {
+      setCurrentStory(id, 0);
+      markStoryAsViewed(id);
+      startProgress();
+    }
+    
+    return () => {
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
+      }
+      setCurrentStory(null);
+    };
+  }, [id]);
+  
+  const startProgress = () => {
+    setProgress(0);
+    
+    if (progressInterval.current) {
+      clearInterval(progressInterval.current);
+    }
+    
+    const interval = 10; // Update every 10ms for smooth progress
+    const increment = (interval / storyDuration) * 100;
+    
+    progressInterval.current = setInterval(() => {
+      setProgress(prev => {
+        const newProgress = prev + increment;
+        
+        if (newProgress >= 100) {
+          clearInterval(progressInterval.current!);
+          handleNext();
+          return 0;
+        }
+        
+        return newProgress;
+      });
+    }, interval);
+  };
+  
+  const handlePrevious = () => {
+    if (currentStoryItemIndex > 0) {
+      setCurrentStory(id, currentStoryItemIndex - 1);
+      startProgress();
+    } else {
+      // Go to previous story or close
+      router.back();
+    }
+  };
+  
+  const handleNext = () => {
+    if (currentStoryItemIndex < storyItems.length - 1) {
+      setCurrentStory(id, currentStoryItemIndex + 1);
+      startProgress();
+    } else {
+      // Go to next story or close
+      router.back();
+    }
+  };
+  
+  const handleClose = () => {
+    router.back();
+  };
+  
+  if (!story || !currentItem) {
+    return null;
+  }
+  
+  return (
+    <View style={styles.container}>
+      <StatusBar style="light" />
+      
+      <View style={styles.progressContainer}>
+        {storyItems.map((_, index) => (
+          <View key={index} style={styles.progressBarContainer}>
+            <View 
+              style={[
+                styles.progressBar, 
+                index === currentStoryItemIndex 
+                  ? { width: `${progress}%` } 
+                  : index < currentStoryItemIndex 
+                    ? { width: '100%' } 
+                    : { width: '0%' }
+              ]} 
+            />
+          </View>
+        ))}
+      </View>
+      
+      <View style={styles.header}>
+        <View style={styles.userInfo}>
+          <Avatar source={user?.avatar || ''} size={36} />
+          <View style={styles.userTextContainer}>
+            <Text style={styles.username}>{user?.displayName || 'User'}</Text>
+            <Text style={styles.timestamp}>{formatStoryTimestamp(currentItem.timestamp)}</Text>
+          </View>
+        </View>
+        
+        <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+          <X size={24} color={colors.card} />
+        </TouchableOpacity>
+      </View>
+      
+      <Image
+        source={{ uri: currentItem.url }}
+        style={styles.image}
+        contentFit="cover"
+      />
+      
+      {currentItem.caption && (
+        <View style={styles.captionContainer}>
+          <Text style={styles.caption}>{currentItem.caption}</Text>
+        </View>
+      )}
+      
+      <TouchableOpacity 
+        style={styles.previousArea} 
+        onPress={handlePrevious}
+        activeOpacity={1}
+      >
+        <ChevronLeft size={36} color="rgba(255, 255, 255, 0.5)" style={styles.navIcon} />
+      </TouchableOpacity>
+      
+      <TouchableOpacity 
+        style={styles.nextArea} 
+        onPress={handleNext}
+        activeOpacity={1}
+      >
+        <ChevronRight size={36} color="rgba(255, 255, 255, 0.5)" style={styles.navIcon} />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 8,
+    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+  },
+  progressBarContainer: {
+    flex: 1,
+    height: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    marginHorizontal: 2,
+    borderRadius: 1,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: colors.card,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  userTextContainer: {
+    marginLeft: 12,
+  },
+  username: {
+    color: colors.card,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  timestamp: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 12,
+  },
+  closeButton: {
+    padding: 4,
+  },
+  image: {
+    position: 'absolute',
+    width,
+    height,
+    zIndex: -1,
+  },
+  captionContainer: {
+    position: 'absolute',
+    bottom: 80,
+    left: 16,
+    right: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  caption: {
+    color: colors.card,
+    fontSize: 16,
+  },
+  previousArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '30%',
+    height: '100%',
+    justifyContent: 'center',
+    paddingLeft: 8,
+  },
+  nextArea: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: '70%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    paddingRight: 8,
+  },
+  navIcon: {
+    opacity: 0,
+  },
+});
+```
+
+## constants/colors.ts
+```ts
+export const colors = {
+  primary: '#8B5A2B',
+  primaryLight: '#A67C52',
+  secondary: '#7D8C75',
+  secondaryLight: '#9DAA96',
+  background: '#F8F7F4',
+  card: '#FFFFFF',
+  text: '#333333',
+  textLight: '#666666',
+  border: '#E0DED8',
+  notification: '#FF6B6B',
+  success: '#4CAF50',
+  danger: '#F44336',
+  warning: '#FFC107',
+  info: '#2196F3',
+  inactive: '#BDBDBD',
+  overlay: 'rgba(0, 0, 0, 0.5)',
+};
+```
+
+## constants/mockData.ts
+```ts
+import { MessageType } from '@/types';
+
+export const mockUsers = [
+  {
+    id: '1',
+    username: 'woodmaster',
+    displayName: 'John Carpenter',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80',
+    isOnline: true,
+  },
+  {
+    id: '2',
+    username: 'craftygal',
+    displayName: 'Sarah Miller',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80',
+    isOnline: false,
+  },
+  {
+    id: '3',
+    username: 'woodturner',
+    displayName: 'Mike Turner',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80',
+    isOnline: true,
+  },
+  {
+    id: '4',
+    username: 'chiselqueen',
+    displayName: 'Emma Johnson',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80',
+    isOnline: true,
+  },
+  {
+    id: '5',
+    username: 'sawdust',
+    displayName: 'David Wilson',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80',
+    isOnline: false,
+  },
+];
+
+export const mockChats = [
+  {
+    id: '1',
+    userId: '1',
+    lastMessage: {
+      type: 'text' as MessageType,
+      content: 'Check out this new dovetail jig!',
+      timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+      isRead: true,
+    },
+    unreadCount: 0,
+  },
+  {
+    id: '2',
+    userId: '2',
+    lastMessage: {
+      type: 'image' as MessageType,
+      content: 'Sent a Snap',
+      timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+      isRead: false,
+    },
+    unreadCount: 1,
+  },
+  {
+    id: '3',
+    userId: '3',
+    lastMessage: {
+      type: 'text' as MessageType,
+      content: "What finish would you recommend for maple?",
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+      isRead: true,
+    },
+    unreadCount: 0,
+  },
+  {
+    id: '4',
+    userId: '4',
+    lastMessage: {
+      type: 'image' as MessageType,
+      content: 'Sent a Snap',
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
+      isRead: true,
+    },
+    unreadCount: 0,
+  },
+  {
+    id: '5',
+    userId: '5',
+    lastMessage: {
+      type: 'text' as MessageType,
+      content: "Thanks for the workshop tips!",
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+      isRead: true,
+    },
+    unreadCount: 0,
+  },
+];
+
+export const mockStories = [
+  {
+    id: '1',
+    userId: '1',
+    items: [
+      {
+        id: '101',
+        type: 'image' as const,
+        url: 'https://images.unsplash.com/photo-1601579112934-17ac2aa86292?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+        caption: 'Working on a new walnut table',
+      },
+    ],
+    lastUpdated: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+    viewed: false,
+  },
+  {
+    id: '2',
+    userId: '2',
+    items: [
+      {
+        id: '201',
+        type: 'image' as const,
+        url: 'https://images.unsplash.com/photo-1541364983171-a8ba01e95cfc?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+        timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+        caption: 'New chisels day!',
+      },
+    ],
+    lastUpdated: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+    viewed: true,
+  },
+  {
+    id: '3',
+    userId: '3',
+    items: [
+      {
+        id: '301',
+        type: 'image' as const,
+        url: 'https://images.unsplash.com/photo-1566895291281-ea63efd4a1b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80',
+        timestamp: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
+        caption: 'Turned this bowl today',
+      },
+    ],
+    lastUpdated: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
+    viewed: false,
+  },
+];
+
+export const mockFilters = [
+  {
+    id: '1',
+    name: 'Species Stamp',
+    description: 'Identifies wood species in your photo',
+    icon: 'tree',
+  },
+  {
+    id: '2',
+    name: 'Shop Grid',
+    description: '1x1 inch measurement grid for scale',
+    icon: 'grid',
+  },
+  {
+    id: '3',
+    name: 'Retro Workshop',
+    description: 'Warm vintage color grade with dust particles',
+    icon: 'camera',
+  },
+  {
+    id: '4',
+    name: 'Big-Eyes Carver',
+    description: 'Playful facial distortion filter',
+    icon: 'eye',
+  },
+];
+```
+
+## types/index.ts
+```ts
+export type User = {
+  id: string;
+  username: string;
+  displayName: string;
+  avatar: string;
+  isOnline: boolean;
+};
+
+export type MessageType = 'text' | 'image' | 'video';
+
+export type Message = {
+  id: string;
+  chatId: string;
+  senderId: string;
+  type: MessageType;
+  content: string;
+  timestamp: string;
+  duration?: number;
+  isExpired?: boolean;
+  isRead: boolean;
+  isReplayed?: boolean;
+  isScreenshotted?: boolean;
+};
+
+export type LastMessage = {
+  type: MessageType;
+  content: string;
+  timestamp: string;
+  isRead: boolean;
+};
+
+export type Chat = {
+  id: string;
+  userId: string;
+  lastMessage: LastMessage;
+  unreadCount: number;
+};
+
+export type StoryItem = {
+  id: string;
+  type: 'image' | 'video';
+  url: string;
+  timestamp: string;
+  caption?: string;
+  duration?: number;
+};
+
+export type Story = {
+  id: string;
+  userId: string;
+  items: StoryItem[];
+  lastUpdated: string;
+  viewed: boolean;
+};
+
+export type Filter = {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+};
+```
+
+## store/authStore.ts
+```ts
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+type AuthState = {
+  isAuthenticated: boolean;
+  userId: string | null;
+  username: string | null;
+  displayName: string | null;
+  avatar: string | null;
+  login: (userId: string, username: string, displayName: string, avatar: string) => void;
+  logout: () => void;
+};
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      isAuthenticated: false,
+      userId: null,
+      username: null,
+      displayName: null,
+      avatar: null,
+      login: (userId, username, displayName, avatar) => 
+        set({ isAuthenticated: true, userId, username, displayName, avatar }),
+      logout: () => 
+        set({ isAuthenticated: false, userId: null, username: null, displayName: null, avatar: null }),
+    }),
+    {
+      name: 'auth-storage',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
+```
+
+## store/chatStore.ts
+```ts
+import { create } from 'zustand';
+import { mockChats, mockUsers } from '@/constants/mockData';
+import { Chat, Message, User } from '@/types';
+
+type ChatState = {
+  chats: Chat[];
+  messages: Record<string, Message[]>;
+  currentChatId: string | null;
+  setCurrentChatId: (chatId: string | null) => void;
+  getChatsWithUserData: () => (Chat & { user: User })[];
+  sendMessage: (chatId: string, message: Omit<Message, 'id' | 'chatId' | 'timestamp' | 'isRead'>) => void;
+  markChatAsRead: (chatId: string) => void;
+  expireMessage: (chatId: string, messageId: string) => void;
+  replayMessage: (chatId: string, messageId: string) => void;
+  screenshotMessage: (chatId: string, messageId: string) => void;
+};
+
+export const useChatStore = create<ChatState>((set, get) => ({
+  chats: mockChats,
+  messages: mockChats.reduce((acc, chat) => {
+    acc[chat.id] = [];
+    return acc;
+  }, {} as Record<string, Message[]>),
+  currentChatId: null,
+  
+  setCurrentChatId: (chatId) => set({ currentChatId: chatId }),
+  
+  getChatsWithUserData: () => {
+    const { chats } = get();
+    return chats.map(chat => {
+      const user = mockUsers.find(user => user.id === chat.userId);
+      return { ...chat, user: user! };
+    });
+  },
+  
+  sendMessage: (chatId, message) => set(state => {
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      chatId,
+      timestamp: new Date().toISOString(),
+      isRead: false,
+      ...message,
+    };
+    
+    const updatedMessages = { 
+      ...state.messages,
+      [chatId]: [...(state.messages[chatId] || []), newMessage]
+    };
+    
+    const updatedChats = state.chats.map(chat => {
+      if (chat.id === chatId) {
+        return {
+          ...chat,
+          lastMessage: {
+            type: newMessage.type,
+            content: newMessage.type === 'text' ? newMessage.content : 'Sent a Snap',
+            timestamp: newMessage.timestamp,
+            isRead: false,
+          },
+          unreadCount: chat.unreadCount + 1,
+        };
+      }
+      return chat;
+    });
+    
+    return { messages: updatedMessages, chats: updatedChats };
+  }),
+  
+  markChatAsRead: (chatId) => set(state => {
+    const updatedChats = state.chats.map(chat => {
+      if (chat.id === chatId) {
+        return {
+          ...chat,
+          lastMessage: {
+            ...chat.lastMessage,
+            isRead: true,
+          },
+          unreadCount: 0,
+        };
+      }
+      return chat;
+    });
+    
+    const updatedMessages = { 
+      ...state.messages,
+      [chatId]: (state.messages[chatId] || []).map(message => ({
+        ...message,
+        isRead: true,
+      }))
+    };
+    
+    return { chats: updatedChats, messages: updatedMessages };
+  }),
+  
+  expireMessage: (chatId, messageId) => set(state => {
+    const updatedMessages = { 
+      ...state.messages,
+      [chatId]: (state.messages[chatId] || []).map(message => {
+        if (message.id === messageId) {
+          return { ...message, isExpired: true };
+        }
+        return message;
+      })
+    };
+    
+    return { messages: updatedMessages };
+  }),
+  
+  replayMessage: (chatId, messageId) => set(state => {
+    const updatedMessages = { 
+      ...state.messages,
+      [chatId]: (state.messages[chatId] || []).map(message => {
+        if (message.id === messageId) {
+          return { ...message, isReplayed: true };
+        }
+        return message;
+      })
+    };
+    
+    return { messages: updatedMessages };
+  }),
+  
+  screenshotMessage: (chatId, messageId) => set(state => {
+    const updatedMessages = { 
+      ...state.messages,
+      [chatId]: (state.messages[chatId] || []).map(message => {
+        if (message.id === messageId) {
+          return { ...message, isScreenshotted: true };
+        }
+        return message;
+      })
+    };
+    
+    return { messages: updatedMessages };
+  }),
+}));
+```
+
+## store/storyStore.ts
+```ts
+import { create } from 'zustand';
+import { mockStories, mockUsers } from '@/constants/mockData';
+import { Story, StoryItem, User } from '@/types';
+
+type StoryState = {
+  stories: Story[];
+  currentStoryId: string | null;
+  currentStoryItemIndex: number;
+  setCurrentStory: (storyId: string | null, itemIndex?: number) => void;
+  getStoriesWithUserData: () => (Story & { user: User })[];
+  addStoryItem: (userId: string, item: Omit<StoryItem, 'id' | 'timestamp'>) => void;
+  markStoryAsViewed: (storyId: string) => void;
+  getMyStories: (userId: string) => Story[];
+  getFriendsStories: (userId: string) => (Story & { user: User })[];
+};
+
+export const useStoryStore = create<StoryState>((set, get) => ({
+  stories: mockStories,
+  currentStoryId: null,
+  currentStoryItemIndex: 0,
+  
+  setCurrentStory: (storyId, itemIndex = 0) => 
+    set({ currentStoryId: storyId, currentStoryItemIndex: itemIndex }),
+  
+  getStoriesWithUserData: () => {
+    const { stories } = get();
+    return stories.map(story => {
+      const user = mockUsers.find(user => user.id === story.userId);
+      return { ...story, user: user! };
+    });
+  },
+  
+  addStoryItem: (userId, item) => set(state => {
+    const newItem: StoryItem = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      ...item,
+    };
+    
+    const existingStoryIndex = state.stories.findIndex(s => s.userId === userId);
+    
+    if (existingStoryIndex >= 0) {
+      // Update existing story
+      const updatedStories = [...state.stories];
+      updatedStories[existingStoryIndex] = {
+        ...updatedStories[existingStoryIndex],
+        items: [...updatedStories[existingStoryIndex].items, newItem],
+        lastUpdated: newItem.timestamp,
+        viewed: false,
+      };
+      return { stories: updatedStories };
+    } else {
+      // Create new story
+      const newStory: Story = {
+        id: Date.now().toString(),
+        userId,
+        items: [newItem],
+        lastUpdated: newItem.timestamp,
+        viewed: false,
+      };
+      return { stories: [...state.stories, newStory] };
+    }
+  }),
+  
+  markStoryAsViewed: (storyId) => set(state => ({
+    stories: state.stories.map(story => 
+      story.id === storyId ? { ...story, viewed: true } : story
+    )
+  })),
+  
+  getMyStories: (userId) => {
+    return get().stories.filter(story => story.userId === userId);
+  },
+  
+  getFriendsStories: (userId) => {
+    const { stories } = get();
+    const friendStories = stories.filter(story => story.userId !== userId);
+    return friendStories.map(story => {
+      const user = mockUsers.find(user => user.id === story.userId);
+      return { ...story, user: user! };
+    });
+  },
+}));
+```
+
+## store/friendStore.ts
+```ts
+import { create } from 'zustand';
+import { mockUsers } from '@/constants/mockData';
+import { User } from '@/types';
+
+type FriendState = {
+  friends: User[];
+  addFriend: (friend: User) => void;
+  removeFriend: (friendId: string) => void;
+  getFriendById: (friendId: string) => User | undefined;
+  searchFriends: (query: string) => User[];
+};
+
+export const useFriendStore = create<FriendState>((set, get) => ({
+  friends: mockUsers,
+  
+  addFriend: (friend) => set(state => ({
+    friends: [...state.friends, friend]
+  })),
+  
+  removeFriend: (friendId) => set(state => ({
+    friends: state.friends.filter(friend => friend.id !== friendId)
+  })),
+  
+  getFriendById: (friendId) => {
+    return get().friends.find(friend => friend.id === friendId);
+  },
+  
+  searchFriends: (query) => {
+    const lowerQuery = query.toLowerCase();
+    return get().friends.filter(
+      friend => 
+        friend.username.toLowerCase().includes(lowerQuery) || 
+        friend.displayName.toLowerCase().includes(lowerQuery)
+    );
+  },
+}));
+```
+
+## utils/timeUtils.ts
+```ts
+export const formatTimestamp = (timestamp: string): string => {
+  const date = new Date(timestamp);
+  const now = new Date();
+  
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+  if (diffInSeconds < 60) {
+    return 'now';
+  }
+  
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes}m`;
+  }
+  
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) {
+    return `${diffInHours}h`;
+  }
+  
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays === 1) {
+    return 'Yesterday';
+  }
+  
+  if (diffInDays < 7) {
+    return `${diffInDays}d`;
+  }
+  
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+export const formatStoryTimestamp = (timestamp: string): string => {
+  const date = new Date(timestamp);
+  const now = new Date();
+  
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+  if (diffInSeconds < 60) {
+    return 'Just now';
+  }
+  
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes}m ago`;
+  }
+  
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) {
+    return `${diffInHours}h ago`;
+  }
+  
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+```
+
+## components/ui/Button.tsx
+```tsx
+import React from 'react';
+import { 
+  TouchableOpacity, 
+  Text, 
+  StyleSheet, 
+  ActivityIndicator,
+  ViewStyle,
+  TextStyle,
+  TouchableOpacityProps
+} from 'react-native';
+import { colors } from '@/constants/colors';
+
+interface ButtonProps extends TouchableOpacityProps {
+  title: string;
+  onPress: () => void;
+  variant?: 'primary' | 'secondary' | 'outline' | 'text';
+  size?: 'small' | 'medium' | 'large';
+  loading?: boolean;
+  disabled?: boolean;
+  style?: ViewStyle;
+  textStyle?: TextStyle;
+  fullWidth?: boolean;
+}
+
+export const Button: React.FC<ButtonProps> = ({
+  title,
+  onPress,
+  variant = 'primary',
+  size = 'medium',
+  loading = false,
+  disabled = false,
+  style,
+  textStyle,
+  fullWidth = false,
+  ...rest
+}) => {
+  const getButtonStyle = (): ViewStyle[] => {
+    const buttonStyles: ViewStyle[] = [styles.button];
+    
+    // Variant styles
+    if (variant === 'primary') {
+      buttonStyles.push(styles.primaryButton);
+    } else if (variant === 'secondary') {
+      buttonStyles.push(styles.secondaryButton);
+    } else if (variant === 'outline') {
+      buttonStyles.push(styles.outlineButton);
+    } else if (variant === 'text') {
+      buttonStyles.push(styles.textButton);
+    }
+    
+    // Size styles
+    if (size === 'small') {
+      buttonStyles.push(styles.smallButton);
+    } else if (size === 'large') {
+      buttonStyles.push(styles.largeButton);
+    }
+    
+    // Full width
+    if (fullWidth) {
+      buttonStyles.push(styles.fullWidth);
+    }
+    
+    // Disabled state
+    if (disabled || loading) {
+      buttonStyles.push(styles.disabledButton);
+    }
+    
+    return buttonStyles;
+  };
+  
+  const getTextStyle = (): TextStyle[] => {
+    const textStyles: TextStyle[] = [styles.buttonText];
+    
+    // Variant text styles
+    if (variant === 'primary') {
+      textStyles.push(styles.primaryButtonText);
+    } else if (variant === 'secondary') {
+      textStyles.push(styles.secondaryButtonText);
+    } else if (variant === 'outline') {
+      textStyles.push(styles.outlineButtonText);
+    } else if (variant === 'text') {
+      textStyles.push(styles.textButtonText);
+    }
+    
+    // Size text styles
+    if (size === 'small') {
+      textStyles.push(styles.smallButtonText);
+    } else if (size === 'large') {
+      textStyles.push(styles.largeButtonText);
+    }
+    
+    // Disabled text
+    if (disabled || loading) {
+      textStyles.push(styles.disabledButtonText);
+    }
+    
+    return textStyles;
+  };
+  
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled || loading}
+      style={[...getButtonStyle(), style]}
+      activeOpacity={0.8}
+      {...rest}
+    >
+      {loading ? (
+        <ActivityIndicator 
+          size="small" 
+          color={variant === 'primary' ? colors.card : colors.primary} 
+        />
+      ) : (
+        <Text style={[...getTextStyle(), textStyle]}>{title}</Text>
+      )}
+    </TouchableOpacity>
+  );
+};
+
+const styles = StyleSheet.create({
+  button: {
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  primaryButton: {
+    backgroundColor: colors.primary,
+  },
+  secondaryButton: {
+    backgroundColor: colors.secondary,
+  },
+  outlineButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  textButton: {
+    backgroundColor: 'transparent',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  smallButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  largeButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+  },
+  fullWidth: {
+    width: '100%',
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  primaryButtonText: {
+    color: colors.card,
+  },
+  secondaryButtonText: {
+    color: colors.card,
+  },
+  outlineButtonText: {
+    color: colors.primary,
+  },
+  textButtonText: {
+    color: colors.primary,
+  },
+  smallButtonText: {
+    fontSize: 14,
+  },
+  largeButtonText: {
+    fontSize: 18,
+  },
+  disabledButtonText: {
+    opacity: 0.8,
+  },
+});
+```
+
+## components/ui/Avatar.tsx
+```tsx
+import React from 'react';
+import { View, StyleSheet, ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
+import { colors } from '@/constants/colors';
+
+interface AvatarProps {
+  source: string;
+  size?: number;
+  style?: ViewStyle;
+  showBorder?: boolean;
+  showOnlineBadge?: boolean;
+  isOnline?: boolean;
+}
+
+export const Avatar: React.FC<AvatarProps> = ({
+  source,
+  size = 40,
+  style,
+  showBorder = false,
+  showOnlineBadge = false,
+  isOnline = false,
+}) => {
+  return (
+    <View style={[styles.container, style]}>
+      <View
+        style={[
+          styles.avatarContainer,
+          showBorder && styles.border,
+          { width: size, height: size, borderRadius: size / 2 },
+        ]}
+      >
+        <Image
+          source={source}
+          style={[
+            styles.avatar,
+            { width: showBorder ? size - 4 : size, height: showBorder ? size - 4 : size, borderRadius: size / 2 },
+          ]}
+          contentFit="cover"
+          transition={200}
+        />
+      </View>
+      
+      {showOnlineBadge && (
+        <View
+          style={[
+            styles.onlineBadge,
+            { backgroundColor: isOnline ? colors.success : colors.inactive },
+            { right: 0, bottom: 0, width: size / 4, height: size / 4 },
+          ]}
+        />
+      )}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'relative',
+  },
+  avatarContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatar: {
+    backgroundColor: colors.border,
+  },
+  border: {
+    borderWidth: 2,
+    borderColor: colors.primary,
+    padding: 2,
+  },
+  onlineBadge: {
+    position: 'absolute',
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: colors.card,
+  },
+});
+```
+
+## components/ui/StoryRing.tsx
+```tsx
+import React from 'react';
+import { View, StyleSheet, ViewStyle } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Avatar } from './Avatar';
+import { colors } from '@/constants/colors';
+
+interface StoryRingProps {
+  source: string;
+  size?: number;
+  style?: ViewStyle;
+  hasStory?: boolean;
+  isViewed?: boolean;
+  isOnline?: boolean;
+  showOnlineBadge?: boolean;
+}
+
+export const StoryRing: React.FC<StoryRingProps> = ({
+  source,
+  size = 60,
+  style,
+  hasStory = false,
+  isViewed = false,
+  isOnline = false,
+  showOnlineBadge = false,
+}) => {
+  if (!hasStory) {
+    return (
+      <Avatar 
+        source={source} 
+        size={size} 
+        style={style} 
+        showOnlineBadge={showOnlineBadge}
+        isOnline={isOnline}
+      />
+    );
+  }
+
+  return (
+    <View style={[styles.container, style]}>
+      <LinearGradient
+        colors={isViewed ? [colors.inactive, colors.inactive] : ['#FCAF45', '#E1306C', '#833AB4']}
+        style={[
+          styles.ring,
+          { width: size + 8, height: size + 8, borderRadius: (size + 8) / 2 },
+        ]}
+      >
+        <View
+          style={[
+            styles.avatarContainer,
+            { width: size, height: size, borderRadius: size / 2 },
+          ]}
+        >
+          <Avatar 
+            source={source} 
+            size={size - 4} 
+            showOnlineBadge={showOnlineBadge}
+            isOnline={isOnline}
+          />
+        </View>
+      </LinearGradient>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ring: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarContainer: {
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
+```
+
+## components/chat/ChatListItem.tsx
+```tsx
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Avatar } from '@/components/ui/Avatar';
+import { formatTimestamp } from '@/utils/timeUtils';
+import { colors } from '@/constants/colors';
+import { Camera } from 'lucide-react-native';
+
+interface ChatListItemProps {
+  id: string;
+  username: string;
+  displayName: string;
+  avatar: string;
+  lastMessage: {
+    type: 'text' | 'image' | 'video';
+    content: string;
+    timestamp: string;
+    isRead: boolean;
+  };
+  unreadCount: number;
+  isOnline: boolean;
+  onPress: () => void;
+}
+
+export const ChatListItem: React.FC<ChatListItemProps> = ({
+  username,
+  displayName,
+  avatar,
+  lastMessage,
+  unreadCount,
+  isOnline,
+  onPress,
+}) => {
+  return (
+    <TouchableOpacity 
+      style={styles.container} 
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <Avatar 
+        source={avatar} 
+        size={50} 
+        showOnlineBadge={true}
+        isOnline={isOnline}
+      />
+      
+      <View style={styles.contentContainer}>
+        <View style={styles.topRow}>
+          <Text style={styles.displayName}>{displayName}</Text>
+          <Text style={styles.timestamp}>{formatTimestamp(lastMessage.timestamp)}</Text>
+        </View>
+        
+        <View style={styles.bottomRow}>
+          <View style={styles.messageContainer}>
+            {lastMessage.type !== 'text' && (
+              <Camera size={16} color={colors.textLight} style={styles.messageIcon} />
+            )}
+            <Text 
+              style={[
+                styles.message, 
+                !lastMessage.isRead && styles.unreadMessage
+              ]}
+              numberOfLines={1}
+            >
+              {lastMessage.content}
+            </Text>
+          </View>
+          
+          {unreadCount > 0 && (
+            <View style={styles.unreadBadge}>
+              <Text style={styles.unreadCount}>{unreadCount}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.card,
+  },
+  contentContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  displayName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  timestamp: {
+    fontSize: 12,
+    color: colors.textLight,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  messageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  messageIcon: {
+    marginRight: 4,
+  },
+  message: {
+    fontSize: 14,
+    color: colors.textLight,
+    flex: 1,
+  },
+  unreadMessage: {
+    fontWeight: '500',
+    color: colors.text,
+  },
+  unreadBadge: {
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  unreadCount: {
+    color: colors.card,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+});
+```
+
+## components/story/StoryThumbnail.tsx
+```tsx
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { StoryRing } from '@/components/ui/StoryRing';
+import { colors } from '@/constants/colors';
+
+interface StoryThumbnailProps {
+  id: string;
+  username: string;
+  avatar: string;
+  hasStory: boolean;
+  isViewed: boolean;
+  isCurrentUser?: boolean;
+  onPress: () => void;
+}
+
+export const StoryThumbnail: React.FC<StoryThumbnailProps> = ({
+  username,
+  avatar,
+  hasStory,
+  isViewed,
+  isCurrentUser = false,
+  onPress,
+}) => {
+  return (
+    <TouchableOpacity 
+      style={styles.container} 
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <StoryRing
+        source={avatar}
+        size={60}
+        hasStory={hasStory}
+        isViewed={isViewed}
+      />
+      <Text style={styles.username} numberOfLines={1}>
+        {isCurrentUser ? 'Your Story' : username}
+      </Text>
+    </TouchableOpacity>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    marginHorizontal: 8,
+    width: 70,
+  },
+  username: {
+    fontSize: 12,
+    color: colors.text,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+});
+```
+
+## components/camera/CameraControls.tsx
+```tsx
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { Image } from 'lucide-react-native';
+import { colors } from '@/constants/colors';
+
+interface CameraControlsProps {
+  onCapture: () => void;
+  onFlip: () => void;
+  onFilterToggle: () => void;
+  isRecording: boolean;
+}
+
+export const CameraControls: React.FC<CameraControlsProps> = ({
+  onCapture,
+  onFlip,
+  onFilterToggle,
+  isRecording,
+}) => {
+  return (
+    <View style={styles.container}>
+      <View style={styles.topControls}>
+        <TouchableOpacity style={styles.controlButton} onPress={onFlip}>
+          <Text style={styles.controlText}>Flip</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.controlButton} onPress={onFilterToggle}>
+          <Image size={24} color={colors.card} />
+          <Text style={styles.controlText}>Filters</Text>
+        </TouchableOpacity>
+      </View>
+      
+      <View style={styles.bottomControls}>
+        <TouchableOpacity 
+          style={[styles.captureButton, isRecording && styles.recordingButton]} 
+          onPress={onCapture}
+          activeOpacity={0.8}
+        >
+          {isRecording && <View style={styles.recordingIndicator} />}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+  },
+  topControls: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: 30,
+  },
+  controlButton: {
+    alignItems: 'center',
+  },
+  controlText: {
+    color: colors.card,
+    fontSize: 12,
+    marginTop: 4,
+  },
+  bottomControls: {
+    alignItems: 'center',
+  },
+  captureButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: colors.card,
+    borderWidth: 4,
+    borderColor: colors.primary,
+  },
+  recordingButton: {
+    borderColor: colors.danger,
+  },
+  recordingIndicator: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    backgroundColor: colors.danger,
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginLeft: -10,
+    marginTop: -10,
+  },
+});
+```
+
+## components/camera/FilterSelector.tsx
+```tsx
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { colors } from '@/constants/colors';
+import { Filter } from '@/types';
+import { Grid, Trees, Camera, Eye } from 'lucide-react-native';
+
+interface FilterSelectorProps {
+  filters: Filter[];
+  selectedFilter: string | null;
+  onSelectFilter: (filterId: string | null) => void;
+}
+
+export const FilterSelector: React.FC<FilterSelectorProps> = ({
+  filters,
+  selectedFilter,
+  onSelectFilter,
+}) => {
+  const getIconForFilter = (iconName: string) => {
+    switch (iconName) {
+      case 'tree':
+        return <Trees size={24} color={colors.card} />;
+      case 'grid':
+        return <Grid size={24} color={colors.card} />;
+      case 'camera':
+        return <Camera size={24} color={colors.card} />;
+      case 'eye':
+        return <Eye size={24} color={colors.card} />;
+      default:
+        return <Camera size={24} color={colors.card} />;
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Filters</Text>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filtersContainer}
+      >
+        <TouchableOpacity
+          style={[
+            styles.filterItem,
+            selectedFilter === null && styles.selectedFilter,
+          ]}
+          onPress={() => onSelectFilter(null)}
+        >
+          <View style={styles.filterIcon}>
+            <Camera size={24} color={colors.card} />
+          </View>
+          <Text style={styles.filterName}>None</Text>
+        </TouchableOpacity>
+        
+        {filters.map((filter) => (
+          <TouchableOpacity
+            key={filter.id}
+            style={[
+              styles.filterItem,
+              selectedFilter === filter.id && styles.selectedFilter,
+            ]}
+            onPress={() => onSelectFilter(filter.id)}
+          >
+            <View style={styles.filterIcon}>
+              {getIconForFilter(filter.icon)}
+            </View>
+            <Text style={styles.filterName}>{filter.name}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingVertical: 20,
+  },
+  title: {
+    color: colors.card,
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 16,
+    paddingHorizontal: 20,
+  },
+  filtersContainer: {
+    paddingHorizontal: 12,
+  },
+  filterItem: {
+    alignItems: 'center',
+    marginHorizontal: 8,
+    opacity: 0.7,
+  },
+  selectedFilter: {
+    opacity: 1,
+  },
+  filterIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  filterName: {
+    color: colors.card,
+    fontSize: 12,
+    textAlign: 'center',
+  },
+});
+```
