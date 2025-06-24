@@ -117,8 +117,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
 
     if (data) {
+      // Map database fields to our Message type
+      const messages = data.map((row: any): Message => ({
+        id: row.id.toString(),
+        chatId: row.chat_id,
+        senderId: row.sender_id,
+        type: row.type,
+        content: row.content,
+        timestamp: row.timestamp,
+        isRead: row.is_read || false,
+        isExpired: row.is_expired || false,
+        isReplayed: row.is_replayed || false,
+        isScreenshotted: row.is_screenshotted || false,
+      }));
+
       set(state => ({
-        messages: { ...state.messages, [chatId]: data as Message[] },
+        messages: { ...state.messages, [chatId]: messages },
       }));
     }
   },
