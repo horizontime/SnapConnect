@@ -10,6 +10,7 @@ type AuthState = {
   avatar: string | null;
   login: (userId: string, username: string, displayName: string, avatar: string) => void;
   logout: () => void;
+  updateAvatar: (avatarUrl: string) => void;
 };
 
 export const useAuthStore = create<AuthState>()(
@@ -24,6 +25,8 @@ export const useAuthStore = create<AuthState>()(
         set({ isAuthenticated: true, userId, username, displayName, avatar }),
       logout: () => 
         set({ isAuthenticated: false, userId: null, username: null, displayName: null, avatar: null }),
+      updateAvatar: (avatarUrl) => 
+        set({ avatar: avatarUrl }),
     }),
     {
       name: 'auth-storage',
