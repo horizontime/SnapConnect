@@ -41,7 +41,6 @@ SnapConnect is a social media application designed specifically for the woodwork
 - **Backend**: Supabase (PostgreSQL, Auth, Real-time)
 - **Media**: Expo Camera, Expo Image, Expo Video
 - **Package Manager**: Bun
-- **Development Tool**: Rork
 
 ## 📋 Prerequisites
 
@@ -106,9 +105,14 @@ Before you begin, ensure you have the following installed:
 ## 📁 Project Structure
 
 ```
-v5-rork/
+SnapConnect/
 ├── app/                    # Expo Router screens and navigation
+│   ├── _layout.tsx        # Root layout with navigation setup
+│   ├── index.tsx          # Entry point with auth redirect
+│   ├── modal.tsx          # Modal screen template
+│   ├── +not-found.tsx     # 404 error page
 │   ├── (tabs)/            # Tab-based navigation screens
+│   │   ├── _layout.tsx    # Tab navigator configuration
 │   │   ├── index.tsx      # Chat list (default tab)
 │   │   ├── camera.tsx     # Camera screen
 │   │   ├── stories.tsx    # Stories feed
@@ -118,25 +122,51 @@ v5-rork/
 │   │   └── signup.tsx     # Sign up screen
 │   ├── chat/              # Chat-related screens
 │   │   └── [id].tsx       # Individual chat screen
+│   ├── friends/           # Friend management screens
+│   │   ├── add.tsx        # Add friends screen
+│   │   └── scan.tsx       # QR code scanner
+│   ├── profile/           # Profile-related screens
+│   │   └── shoptag.tsx    # ShopTag QR code display
 │   └── story/             # Story viewer
 │       └── [id].tsx       # Individual story viewer
+├── assets/                # Static assets
+│   └── images/           # App images
+│       ├── adaptive-icon.png
+│       ├── favicon.png
+│       ├── icon.png
+│       └── splash-icon.png
 ├── components/            # Reusable React components
 │   ├── ui/               # Generic UI components
+│   │   ├── Avatar.tsx    # User avatar component
+│   │   ├── Button.tsx    # Reusable button component
+│   │   └── StoryRing.tsx # Story status ring
 │   ├── chat/             # Chat-specific components
+│   │   └── ChatListItem.tsx
 │   ├── camera/           # Camera-related components
+│   │   ├── CameraControls.tsx
+│   │   └── FilterSelector.tsx
+│   ├── friend/           # Friend-related components
+│   │   └── FriendListItem.tsx
 │   └── story/            # Story-specific components
+│       └── StoryThumbnail.tsx
+├── constants/            # App constants and configuration
+│   ├── colors.ts         # Color palette
+│   └── mockData.ts       # Development mock data
 ├── store/                # Zustand state management
 │   ├── authStore.ts      # Authentication state
 │   ├── chatStore.ts      # Chat and messages state
 │   ├── friendStore.ts    # Friends and contacts state
 │   └── storyStore.ts     # Stories state
-├── constants/            # App constants and configuration
-│   ├── colors.ts         # Color palette
-│   └── mockData.ts       # Development mock data
+├── types/                # TypeScript type definitions
+│   └── index.ts          # Centralized type exports
 ├── utils/                # Utility functions
 │   ├── supabase.ts       # Supabase client configuration
 │   └── timeUtils.ts      # Time formatting utilities
-└── types/                # TypeScript type definitions
+├── app.json              # Expo configuration
+├── babel.config.js       # Babel configuration
+├── bun.lock              # Bun lockfile
+├── package.json          # Project dependencies and scripts
+├── README.md             # Project documentationsteps
 ```
 
 ## 🎨 Design System
@@ -154,11 +184,6 @@ v5-rork/
 
 ## 🧪 Development
 
-### Mock Data
-The app currently uses mock data for development. You can test with:
-- **Username**: `woodmaster`
-- **Password**: `password123`
-
 ### Code Style
 - TypeScript for type safety
 - ESLint and Prettier for code formatting
@@ -170,24 +195,6 @@ The app currently uses mock data for development. You can test with:
 - Persistent auth state with AsyncStorage
 - Mock data integration for rapid development
 
-## 🚧 Roadmap
-
-### Phase 1 (Current)
-- [x] Core messaging functionality
-- [x] Stories implementation
-- [x] Camera integration
-- [x] Friend management
-- [x] Authentication flow
-- [ ] Supabase backend integration
-- [ ] Real-time messaging
-- [ ] Media upload/storage
-
-### Phase 2 (Planned)
-- [ ] RAG integration for content recommendations
-- [ ] AI-powered project assistance
-- [ ] Advanced AR filters
-- [ ] Community marketplace
-- [ ] Project collaboration tools
 
 ## 🤝 Contributing
 
