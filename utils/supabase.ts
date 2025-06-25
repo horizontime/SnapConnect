@@ -6,13 +6,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 let supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
 let supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string;
 
-// Debug: Check what we're getting
-console.log('[Supabase] Environment check:', {
-  url: supabaseUrl,
-  keyLength: supabaseAnonKey?.length,
-  platform: typeof window !== 'undefined' ? 'web' : 'native'
-});
-
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('[Supabase] URL or Anon Key is missing. Did you set your env vars?');
   
@@ -23,10 +16,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
     supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxeXRwd2tyZGppYnF1bnVjaWdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NDQ0MjMsImV4cCI6MjA2NjMyMDQyM30.YwIpswXekP1Vi8T753RAEzx7jmtYeOSeeKMCyj_cijU';
   }
 }
-
-// Debug: Log the URL to verify it's correct
-console.log('[Supabase] Connecting to:', supabaseUrl);
-console.log('[Supabase] Key preview:', supabaseAnonKey?.substring(0, 20) + '...');
 
 // Custom WebSocket for web platform to ensure proper connection
 const CustomWebSocket = typeof window !== 'undefined' 
