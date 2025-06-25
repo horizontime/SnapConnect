@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '@/utils/supabase';
+import { debugStorageSetup } from '@/utils/debug';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -38,24 +39,56 @@ export default function ProfileScreen() {
   };
   
   const handleImagePicker = async () => {
+    console.log('handleImagePicker called'); // Debug log
     try {
-      // Request permissions
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please allow access to your photo library to upload a profile picture.');
-        return;
+      // Show action sheet to choose between camera and gallery
+      Alert.alert(
+        'Update Profile Picture',
+        'Choose an option',
+        [
+          { text: 'Take Photo', onPress: () => pickImage('camera') },
+          { text: 'Choose from Gallery', onPress: () => pickImage('library') },
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      );
+    } catch (error) {
+      console.error('Error showing picker options:', error);
+      Alert.alert('Error', 'Failed to show options. Please try again.');
+    }
+  };
+  
+  const pickImage = async (source: 'camera' | 'library') => {
+    try {
+      // Request permissions based on source
+      if (source === 'camera') {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Required', 'Please allow access to your camera to take a profile picture.');
+          return;
+        }
+      } else {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Required', 'Please allow access to your photo library to upload a profile picture.');
+          return;
+        }
       }
       
-      // Launch image picker
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
+      // Launch appropriate picker
+      const result = source === 'camera' 
+        ? await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          })
+        : await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
       
-      if (!result.canceled) {
+      if (!result.canceled && result.assets[0]) {
         await uploadImage(result.assets[0].uri);
       }
     } catch (error) {
@@ -65,10 +98,18 @@ export default function ProfileScreen() {
   };
   
   const uploadImage = async (uri: string) => {
-    if (!userId) return;
+    if (!userId) {
+      Alert.alert('Error', 'User ID not found. Please log in again.');
+      return;
+    }
     
     setIsUploading(true);
     try {
+      // Check if Supabase is properly configured
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+      
       // Read the image file as base64
       const base64 = await FileSystem.readAsStringAsync(uri, { 
         encoding: FileSystem.EncodingType.Base64 
@@ -91,29 +132,7 @@ export default function ProfileScreen() {
         });
       
       if (error) {
-        // If bucket doesn't exist, try creating it
-        if (error.message.includes('not found')) {
-          const { error: createError } = await supabase.storage.createBucket('user-content', {
-            public: true,
-            fileSizeLimit: 5242880, // 5MB
-          });
-          
-          if (!createError || createError.message === 'Bucket already exists') {
-            // Retry upload
-            const { data: retryData, error: retryError } = await supabase.storage
-              .from('user-content')
-              .upload(filePath, arrayBuffer, {
-                contentType: `image/${fileExt}`,
-                upsert: true,
-              });
-            
-            if (retryError) throw retryError;
-          } else {
-            throw createError;
-          }
-        } else {
-          throw error;
-        }
+        throw error;
       }
       
       // Get public URL
@@ -121,13 +140,27 @@ export default function ProfileScreen() {
         .from('user-content')
         .getPublicUrl(filePath);
       
+      console.log('Avatar uploaded successfully:', publicUrl);
+      
       // Update avatar in store
       updateAvatar(publicUrl);
+      
+      // Update the user profile in database
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', userId);
+      
+      if (updateError) {
+        console.warn('Failed to update profile in database:', updateError);
+        // Don't throw here as the image was uploaded successfully
+      }
       
       Alert.alert('Success', 'Profile picture updated successfully!');
     } catch (error) {
       console.error('Error uploading image:', error);
-      Alert.alert('Error', 'Failed to upload image. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      Alert.alert('Upload Failed', `Failed to upload image: ${errorMessage}`);
     } finally {
       setIsUploading(false);
     }
@@ -156,18 +189,23 @@ export default function ProfileScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleImagePicker} disabled={isUploading}>
+        <TouchableOpacity 
+          onPress={handleImagePicker} 
+          disabled={isUploading}
+          style={styles.avatarTouchable}
+          activeOpacity={0.7}
+        >
           <View style={styles.avatarContainer}>
             <Avatar 
               source={avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80'} 
               size={80} 
             />
             {isUploading ? (
-              <View style={styles.uploadingOverlay}>
+              <View style={styles.uploadingOverlay} pointerEvents="none">
                 <ActivityIndicator color={colors.background} />
               </View>
             ) : (
-              <View style={styles.cameraIcon}>
+              <View style={styles.cameraIcon} pointerEvents="none">
                 <Camera size={20} color={colors.background} />
               </View>
             )}
@@ -241,6 +279,30 @@ export default function ProfileScreen() {
         <LogOut size={20} color={colors.danger} />
         <Text style={styles.logoutText}>Log Out</Text>
       </TouchableOpacity>
+      
+      {/* Debug button - only show in development */}
+      {__DEV__ && (
+        <>
+          <TouchableOpacity 
+            style={[styles.logoutButton, { marginTop: 8 }]} 
+            onPress={() => {
+              debugStorageSetup();
+              Alert.alert('Debug', 'Check console for storage debug info');
+            }}
+          >
+            <Settings size={20} color={colors.textLight} />
+            <Text style={[styles.logoutText, { color: colors.textLight }]}>Debug Storage</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.logoutButton, { marginTop: 8 }]} 
+            onPress={handleImagePicker}
+          >
+            <Camera size={20} color={colors.textLight} />
+            <Text style={[styles.logoutText, { color: colors.textLight }]}>Test Image Picker</Text>
+          </TouchableOpacity>
+        </>
+      )}
     </ScrollView>
   );
 }
@@ -257,6 +319,9 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     position: 'relative',
+  },
+  avatarTouchable: {
+    alignItems: 'center',
   },
   cameraIcon: {
     position: 'absolute',

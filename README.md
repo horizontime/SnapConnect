@@ -65,10 +65,15 @@ Before you begin, ensure you have the following installed:
    ```
 
 3. **Set up environment variables** (when connecting to Supabase)
-   ```bash
-   cp .env.example .env
-   # Edit .env with your Supabase credentials
-   ```
+   - Copy `env.example` to `.env`:
+     ```bash
+     cp env.example .env
+     ```
+   - Edit `.env` and add your Supabase credentials:
+     ```env
+     EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+     EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+     ```
 
 ## 🏃‍♂️ Running the App
 
@@ -165,39 +170,54 @@ SnapConnect/
 ├── babel.config.js       # Babel configuration
 ├── bun.lock              # Bun lockfile
 ├── package.json          # Project dependencies and scripts
-└── README.md             # Project documentationsteps
+└── README.md             # Project documentation
 ```
 
 ## 🎨 Design System
 
-### Color Palette
-- **Primary**: `#8B5A2B` (Warm Brown) - Represents wood and craftsmanship
-- **Secondary**: `#7D8C75` (Sage Green) - Natural, earthy feel
-- **Background**: `#F8F7F4` (Warm Off-White) - Premium, crafted appearance
-- **Text**: `#333333` (Dark Gray) - High readability
+### Profile Picture Upload
 
-### Typography
-- Clean, modern sans-serif fonts
-- Clear hierarchy with consistent sizing
-- Optimized for mobile readability
+The profile picture upload feature supports:
+- Taking photos with camera
+- Selecting from gallery
+- Automatic image compression
+- Square aspect ratio with editing
+- 5MB file size limit
 
-## 🧪 Development
+### Troubleshooting Profile Upload
 
-### Code Style
-- TypeScript for type safety
-- ESLint and Prettier for code formatting
-- Component-based architecture
-- Functional components with hooks
+If profile picture upload is not working:
 
-### State Management
-- Zustand stores for different domains
-- Persistent auth state with AsyncStorage
-- Mock data integration for rapid development
+1. **Check Permissions**: Ensure the app has camera and photo library permissions
+2. **Verify Supabase Config**: Confirm your environment variables are set correctly
+3. **Storage Bucket**: Verify the `user-content` bucket exists and is public
+4. **CORS Settings**: Ensure CORS is properly configured for web platform
+5. **File Size**: Images must be under 5MB
 
+For detailed troubleshooting, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 
-## 🤝 Contributing
+## Development
 
-We welcome contributions! Please follow these steps:
+### Project Structure
+```
+v5-rork/
+├── app/              # Expo Router screens
+├── components/       # Reusable UI components
+├── store/           # Zustand state management
+├── utils/           # Utilities and configurations
+└── assets/          # Images and fonts
+```
+
+### Key Technologies
+- React Native with Expo
+- TypeScript
+- Expo Router for navigation
+- Zustand for state management
+- Supabase for backend
+- Expo Image Picker for photos
+- NativeWind for styling
+
+## Contributing
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
@@ -205,23 +225,6 @@ We welcome contributions! Please follow these steps:
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📄 License
+## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Expo team for the amazing development platform
-- Supabase for backend infrastructure
-- The React Native community
-- All contributors and testers
-
-## 📞 Support
-
-For support, please open an issue in the GitHub repository or contact the development team.
-
----
-
-<div align="center">
-  Made with ❤️ for the woodworking community
-</div> 
+This project is licensed under the MIT License.

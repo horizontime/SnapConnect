@@ -39,3 +39,46 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     transport: CustomWebSocket,
   },
 }); 
+
+// Helper function to ensure storage bucket exists
+export async function ensureStorageBucket() {
+  try {
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    
+    if (listError) {
+      console.error('Error listing buckets:', listError);
+      return false;
+    }
+    
+    const bucketExists = buckets?.some(bucket => bucket.name === 'user-content');
+    
+    if (!bucketExists) {
+      console.log('Creating user-content bucket...');
+      const { error: createError } = await supabase.storage.createBucket('user-content', {
+        public: true,
+        fileSizeLimit: 5242880, // 5MB
+        allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
+      });
+      
+      if (createError) {
+        if (createError.message.includes('already exists')) {
+          console.log('Bucket already exists');
+          return true;
+        }
+        console.error('Error creating bucket:', createError);
+        return false;
+      }
+      
+      console.log('Bucket created successfully');
+      
+      // Set CORS policy for the bucket
+      // Note: This might need to be done through Supabase dashboard
+      // as the API might not support it directly
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error in ensureStorageBucket:', error);
+    return false;
+  }
+} 
