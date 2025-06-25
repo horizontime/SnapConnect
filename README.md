@@ -165,7 +165,7 @@ SnapConnect/
 ├── babel.config.js       # Babel configuration
 ├── bun.lock              # Bun lockfile
 ├── package.json          # Project dependencies and scripts
-├── README.md             # Project documentationsteps
+└── README.md             # Project documentationsteps
 ```
 
 ## 🎨 Design System
