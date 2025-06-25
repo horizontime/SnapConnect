@@ -23,6 +23,9 @@ export default function ChatScreen() {
   const [text, setText] = useState('');
   const flatListRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
+  
+  // Amount to translate view when keyboard is shown
+  const keyboardVerticalOffset = Platform.OS === 'ios' ? 90 : 40;
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const friend = getFriendById(userId);
@@ -149,8 +152,8 @@ export default function ChatScreen() {
       
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : insets.bottom}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={keyboardVerticalOffset}
       >
         <FlatList
           ref={flatListRef}
