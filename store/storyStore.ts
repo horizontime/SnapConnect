@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { mockStories, mockUsers } from '@/constants/mockData';
+import { mockUsers } from '@/constants/mockData';
 import { supabase } from '@/utils/supabase';
 import { Story, StoryItem, User } from '@/types';
 
@@ -17,7 +17,7 @@ type StoryState = {
 };
 
 export const useStoryStore = create<StoryState>((set, get) => ({
-  stories: mockStories,
+  stories: [],
   currentStoryId: null,
   currentStoryItemIndex: 0,
   
