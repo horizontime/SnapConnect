@@ -131,7 +131,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const messages = data.map((row: any): Message => ({
         id: row.id.toString(),
         chatId: row.chat_id,
-        senderId: row.sender_id,
+        senderId: row.sender_id.toString(),
         type: row.type,
         content: row.content,
         timestamp: row.timestamp,
@@ -158,7 +158,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const optimisticMessage: Message = {
       id: tempId,
       chatId,
-      senderId: userId,
+      senderId: userId.toString(),
       type: message.type,
       content: message.content,
       timestamp,
@@ -277,12 +277,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     socket.on(CHAT_NEW, (msg: ChatNewPayload) => {
       useChatStore.setState(state => {
         const existing = state.messages[msg.chatId] || [];
-        // Remove temp message matching content and sender
+        const newMsg = { ...msg, senderId: msg.senderId.toString() };
         const withoutTemp = existing.filter(m => !m.id.startsWith('temp-'));
         return {
           messages: {
             ...state.messages,
-            [msg.chatId]: [...withoutTemp, msg],
+            [msg.chatId]: [...withoutTemp, newMsg],
           },
         };
       });

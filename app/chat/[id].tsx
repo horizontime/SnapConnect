@@ -72,7 +72,7 @@ export default function ChatScreen() {
   };
   
   const renderMessage = ({ item }: { item: Message }) => {
-    const isMe = item.senderId === authUserId;
+    const isMe = String(item.senderId) === String(authUserId);
     
     return (
       <View style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage]}>
@@ -145,6 +145,7 @@ export default function ChatScreen() {
           data={chatMessages}
           keyExtractor={(item) => item.id}
           renderItem={renderMessage}
+          extraData={authUserId}
           contentContainerStyle={styles.messagesContainer}
           onContentSizeChange={() => {
             if (chatMessages.length > 0) {
