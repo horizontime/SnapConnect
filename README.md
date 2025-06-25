@@ -78,7 +78,6 @@ Before you begin, ensure you have the following installed:
    ```bash
    bun run start
    ```
-   This runs: `bunx rork start -p fn0jq43paqve7tg0sqkt9 --tunnel`
 
 2. **For web development**
    ```bash
