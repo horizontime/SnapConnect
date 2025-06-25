@@ -14,6 +14,7 @@ export const CHAT_NEW = 'chat:new' as const;
 export const CHAT_READ = 'chat:read' as const;
 export const CHAT_TYPING = 'chat:typing' as const;
 export const SYSTEM_ERROR = 'system:error' as const;
+export const PRESENCE_UPDATE = 'presence:update' as const;
 
 // A union of all event string literals
 export type SocketEvent =
@@ -21,7 +22,8 @@ export type SocketEvent =
   | typeof CHAT_NEW
   | typeof CHAT_READ
   | typeof CHAT_TYPING
-  | typeof SYSTEM_ERROR;
+  | typeof SYSTEM_ERROR
+  | typeof PRESENCE_UPDATE;
 
 // ---------------------------------------------
 // Payload types
@@ -60,6 +62,11 @@ export interface SystemErrorPayload {
   message: string;
 }
 
+export interface PresenceUpdatePayload {
+  userId: string;
+  isOnline: boolean;
+}
+
 // ---------------------------------------------
 // Event map helper (useful for typed Socket.IO wrappers)
 // ---------------------------------------------
@@ -70,4 +77,5 @@ export interface ChatEventMap {
   [CHAT_READ]: (payload: ChatReadPayload) => void;
   [CHAT_TYPING]: (payload: ChatTypingPayload) => void;
   [SYSTEM_ERROR]: (payload: SystemErrorPayload) => void;
+  [PRESENCE_UPDATE]: (payload: PresenceUpdatePayload) => void;
 } 

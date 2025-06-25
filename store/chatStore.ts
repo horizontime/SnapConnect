@@ -8,9 +8,12 @@ import {
   CHAT_NEW,
   CHAT_READ,
   CHAT_TYPING,
+  PRESENCE_UPDATE,
   ChatNewPayload,
   ChatReadPayload,
+  PresenceUpdatePayload,
 } from '@/shared/chatEvents';
+import { useFriendStore } from '@/store/friendStore';
 
 type ChatState = {
   chats: Chat[];
@@ -26,8 +29,6 @@ type ChatState = {
   expireMessage: (chatId: string, messageId: string) => void;
   replayMessage: (chatId: string, messageId: string) => void;
   screenshotMessage: (chatId: string, messageId: string) => void;
-  subscribeToChat: (chatId: string) => void;
-  unsubscribeFromChat: (chatId: string) => void;
 };
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -263,14 +264,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
     
     return { messages: updatedMessages };
   }),
-
-  subscribeToChat: async (_chatId: string) => {
-    // No longer needed — server automatically places socket in rooms.
-  },
-
-  unsubscribeFromChat: async (_chatId: string) => {
-    // No-op for Socket.IO implementation
-  },
 }));
 
 // ---------------------------------------------
@@ -284,8 +277,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
     socket.on(CHAT_NEW, (msg: ChatNewPayload) => {
       useChatStore.setState(state => {
         const existing = state.messages[msg.chatId] || [];
-        // Replace optimistic if temp id present
-        const withoutTemp = existing.filter(m => m.id !== msg.id && !m.id.startsWith('temp-'));
+        // Remove temp message matching content and sender
+        const withoutTemp = existing.filter(m => !m.id.startsWith('temp-'));
         return {
           messages: {
             ...state.messages,
@@ -308,6 +301,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
       useChatStore.setState(state => ({
         typingIndicators: { ...state.typingIndicators, [chatId]: isTyping },
       }));
+    });
+
+    socket.on(PRESENCE_UPDATE, ({ userId, isOnline }: PresenceUpdatePayload) => {
+      useFriendStore.getState().setOnlineStatus(userId, isOnline);
     });
   } catch (err: any) {
     console.error('[ChatStore] Failed to initialize socket listeners', err?.message);

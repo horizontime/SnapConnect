@@ -10,6 +10,7 @@ type FriendState = {
   getFriendById: (friendId: string) => User | undefined;
   searchFriends: (query: string) => User[];
   fetchFriends: () => Promise<void>;
+  setOnlineStatus: (userId: string, isOnline: boolean) => void;
 };
 
 export const useFriendStore = create<FriendState>((set, get) => ({
@@ -75,4 +76,8 @@ export const useFriendStore = create<FriendState>((set, get) => ({
       console.error('[FriendStore] fetchFriends', err.message);
     }
   },
+  
+  setOnlineStatus: (userId, isOnline) => set(state => ({
+    friends: state.friends.map(f => f.id === userId ? { ...f, isOnline } : f),
+  })),
 }));

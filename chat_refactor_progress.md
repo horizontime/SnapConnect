@@ -108,3 +108,21 @@ Server now supports the full Phase 3 workflow.
 The Expo client is now wired to the Socket.IO server. 🚀
 
 ➡️ You can run both server (`cd server && bun run dev`) and app (`bun start` or `expo start`) and test live messaging in Expo Go.
+
+## Phase 5 – UI/UX Enhancements
+
+### Step 1 – Real-time online presence (✅ Completed)
+- Added `presence:update` event to shared contract.
+- Server now emits presence updates when a user connects/disconnects to each chat room.
+- Client listens and updates `friendStore.isOnline` so green badge shows instantly.
+
+### Step 2 – Delivered / Read ticks (✅ Completed)
+- Outgoing messages now render status icons:
+  - 🕒 Clock while sending (optimistic temp message)
+  - ✓ single tick once delivered to server
+  - ✓✓ double tick after read receipt arrives
+- Implemented with Lucide icons in `chat/[id].tsx`.
+
+Typing indicator already done earlier.
+
+Next: delivered ✓ / read ✓✓ ticks (optional) or any further polish you'd like.

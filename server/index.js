@@ -82,6 +82,9 @@ io.on('connection', async (socket) => {
 
     if (!presence.has(chatId)) presence.set(chatId, new Set());
     presence.get(chatId).add(userId);
+
+    // Notify others in the room that this user is online
+    socket.to(chatId).emit('presence:update', { userId, isOnline: true });
   });
 
   socket.emit('system:hello', { message: 'Connected to Socket.IO server!' });
@@ -168,6 +171,8 @@ io.on('connection', async (socket) => {
         presence.get(room).delete(userId);
         if (presence.get(room).size === 0) {
           presence.delete(room);
+          // broadcast offline status
+          socket.to(room).emit('presence:update', { userId, isOnline: false });
         }
       }
     }

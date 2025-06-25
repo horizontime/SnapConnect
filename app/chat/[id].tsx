@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/Avatar';
 import { formatTimestamp } from '@/utils/timeUtils';
-import { Camera, Send } from 'lucide-react-native';
+import { Camera, Send, Check, Clock, CheckCheck } from 'lucide-react-native';
 import { Message } from '@/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSocket } from '@/utils/socket';
@@ -37,18 +37,6 @@ export default function ChatScreen() {
     
     return () => {
       setCurrentChatId(null);
-    };
-  }, [id]);
-  
-  // subscribe to realtime
-  useEffect(() => {
-    if (id) {
-      useChatStore.getState().subscribeToChat(id);
-    }
-    return () => {
-      if (id) {
-        useChatStore.getState().unsubscribeFromChat(id);
-      }
     };
   }, [id]);
   
@@ -108,9 +96,22 @@ export default function ChatScreen() {
             )}
           </View>
         )}
-        <Text style={[styles.timestamp, isMe ? styles.myTimestamp : styles.theirTimestamp]}>
-          {formatTimestamp(item.timestamp)}
-        </Text>
+        <View style={styles.metaRow}>
+          <Text style={[styles.timestamp, isMe ? styles.myTimestamp : styles.theirTimestamp]}>
+            {formatTimestamp(item.timestamp)}
+          </Text>
+          {isMe && (
+            <View style={{ marginLeft: 4 }}>
+              {item.id.startsWith('temp-') ? (
+                <Clock size={12} color={colors.textLight} />
+              ) : item.isRead ? (
+                <CheckCheck size={12} color={colors.primary} />
+              ) : (
+                <Check size={12} color={colors.textLight} />
+              )}
+            </View>
+          )}
+        </View>
       </View>
     );
   };
@@ -314,5 +315,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textLight,
     textAlign: 'center',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });
