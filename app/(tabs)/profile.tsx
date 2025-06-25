@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/Avatar';
@@ -41,7 +41,13 @@ export default function ProfileScreen() {
   const handleImagePicker = async () => {
     console.log('handleImagePicker called'); // Debug log
     try {
-      // Show action sheet to choose between camera and gallery
+      // On web, go directly to gallery picker
+      if (Platform.OS === 'web') {
+        await pickImage('library');
+        return;
+      }
+      
+      // On mobile, show action sheet to choose between camera and gallery
       Alert.alert(
         'Update Profile Picture',
         'Choose an option',
@@ -53,24 +59,32 @@ export default function ProfileScreen() {
       );
     } catch (error) {
       console.error('Error showing picker options:', error);
-      Alert.alert('Error', 'Failed to show options. Please try again.');
+      if (Platform.OS === 'web') {
+        // For web, use console.error instead of Alert
+        console.error('Failed to show options. Please try again.');
+      } else {
+        Alert.alert('Error', 'Failed to show options. Please try again.');
+      }
     }
   };
   
   const pickImage = async (source: 'camera' | 'library') => {
     try {
-      // Request permissions based on source
-      if (source === 'camera') {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permission Required', 'Please allow access to your camera to take a profile picture.');
-          return;
-        }
-      } else {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permission Required', 'Please allow access to your photo library to upload a profile picture.');
-          return;
+      // Skip permission requests on web - they're handled by the browser
+      if (Platform.OS !== 'web') {
+        // Request permissions based on source
+        if (source === 'camera') {
+          const { status } = await ImagePicker.requestCameraPermissionsAsync();
+          if (status !== 'granted') {
+            Alert.alert('Permission Required', 'Please allow access to your camera to take a profile picture.');
+            return;
+          }
+        } else {
+          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (status !== 'granted') {
+            Alert.alert('Permission Required', 'Please allow access to your photo library to upload a profile picture.');
+            return;
+          }
         }
       }
       
@@ -93,13 +107,21 @@ export default function ProfileScreen() {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
+      if (Platform.OS === 'web') {
+        console.error('Failed to pick image. Please try again.');
+      } else {
+        Alert.alert('Error', 'Failed to pick image. Please try again.');
+      }
     }
   };
   
   const uploadImage = async (uri: string) => {
     if (!userId) {
-      Alert.alert('Error', 'User ID not found. Please log in again.');
+      if (Platform.OS === 'web') {
+        console.error('User ID not found. Please log in again.');
+      } else {
+        Alert.alert('Error', 'User ID not found. Please log in again.');
+      }
       return;
     }
     
@@ -110,18 +132,26 @@ export default function ProfileScreen() {
         throw new Error('Supabase client not initialized');
       }
       
-      // Read the image file as base64
-      const base64 = await FileSystem.readAsStringAsync(uri, { 
-        encoding: FileSystem.EncodingType.Base64 
-      });
+      let arrayBuffer: ArrayBuffer;
+      
+      if (Platform.OS === 'web') {
+        // On web, the URI is actually a blob URL
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        arrayBuffer = await blob.arrayBuffer();
+      } else {
+        // On mobile, use FileSystem to read as base64
+        const base64 = await FileSystem.readAsStringAsync(uri, { 
+          encoding: FileSystem.EncodingType.Base64 
+        });
+        // Convert base64 to ArrayBuffer
+        arrayBuffer = decode(base64);
+      }
       
       // Generate unique filename
       const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
-      
-      // Convert base64 to ArrayBuffer
-      const arrayBuffer = decode(base64);
       
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage
@@ -156,11 +186,22 @@ export default function ProfileScreen() {
         // Don't throw here as the image was uploaded successfully
       }
       
-      Alert.alert('Success', 'Profile picture updated successfully!');
+      if (Platform.OS === 'web') {
+        // On web, show success in console
+        console.log('Profile picture updated successfully!');
+        // Optionally, you could show a toast notification here
+      } else {
+        Alert.alert('Success', 'Profile picture updated successfully!');
+      }
     } catch (error) {
       console.error('Error uploading image:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      Alert.alert('Upload Failed', `Failed to upload image: ${errorMessage}`);
+      if (Platform.OS === 'web') {
+        console.error(`Failed to upload image: ${errorMessage}`);
+        // Optionally, you could show a toast notification here
+      } else {
+        Alert.alert('Upload Failed', `Failed to upload image: ${errorMessage}`);
+      }
     } finally {
       setIsUploading(false);
     }
@@ -287,7 +328,11 @@ export default function ProfileScreen() {
             style={[styles.logoutButton, { marginTop: 8 }]} 
             onPress={() => {
               debugStorageSetup();
-              Alert.alert('Debug', 'Check console for storage debug info');
+              if (Platform.OS === 'web') {
+                console.log('Check console for storage debug info');
+              } else {
+                Alert.alert('Debug', 'Check console for storage debug info');
+              }
             }}
           >
             <Settings size={20} color={colors.textLight} />
@@ -322,6 +367,11 @@ const styles = StyleSheet.create({
   },
   avatarTouchable: {
     alignItems: 'center',
+    ...Platform.select({
+      web: {
+        cursor: 'pointer' as any,
+      },
+    }),
   },
   cameraIcon: {
     position: 'absolute',
