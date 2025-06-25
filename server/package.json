@@ -1,0 +1,15 @@
+{
+  "name": "socket-server",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "bun index.js"
+  },
+  "dependencies": {
+    "socket.io": "^4.7.5",
+    "@supabase/supabase-js": "^2.50.1",
+    "dotenv": "^16.4.5"
+  }
+} 

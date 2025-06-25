@@ -2,10 +2,20 @@ import { create } from 'zustand';
 import { supabase } from '@/utils/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { Chat, Message, User } from '@/types';
+import { getSocket } from '@/utils/socket';
+import {
+  CHAT_SEND,
+  CHAT_NEW,
+  CHAT_READ,
+  CHAT_TYPING,
+  ChatNewPayload,
+  ChatReadPayload,
+} from '@/shared/chatEvents';
 
 type ChatState = {
   chats: Chat[];
   messages: Record<string, Message[]>;
+  typingIndicators: Record<string, boolean>;
   currentChatId: string | null;
   setCurrentChatId: (chatId: string | null) => void;
   getChatsWithUserData: () => (Chat & { user: User })[];
@@ -18,14 +28,13 @@ type ChatState = {
   screenshotMessage: (chatId: string, messageId: string) => void;
   subscribeToChat: (chatId: string) => void;
   unsubscribeFromChat: (chatId: string) => void;
-  _subscriptions: Record<string, any>;
 };
 
 export const useChatStore = create<ChatState>((set, get) => ({
   chats: [],
   messages: {},
+  typingIndicators: {},
   currentChatId: null,
-  _subscriptions: {},
   
   setCurrentChatId: (chatId) => set({ currentChatId: chatId }),
   
@@ -141,95 +150,77 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const { userId } = useAuthStore.getState();
     if (!userId) return;
 
+    const tempId = `temp-${Date.now()}`;
     const timestamp = new Date().toISOString();
 
-    const { data: inserted, error } = await supabase
-      .from('messages')
-      .insert([{ chat_id: chatId, sender_id: userId, type: message.type, content: message.content, timestamp }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('[ChatStore] Failed to send message:', error.message);
-      return;
-    }
-
-    const newMessage: Message = {
-      id: inserted.id.toString(),
+    // Optimistically add to local state
+    const optimisticMessage: Message = {
+      id: tempId,
       chatId,
       senderId: userId,
-      type: inserted.type,
-      content: inserted.content,
-      timestamp: inserted.timestamp,
+      type: message.type,
+      content: message.content,
+      timestamp,
       isRead: false,
     };
 
-    console.log('[ChatStore] Message sent, adding to local state:', newMessage.id);
+    set(state => ({
+      messages: {
+        ...state.messages,
+        [chatId]: [...(state.messages[chatId] || []), optimisticMessage],
+      },
+    }));
 
-    set(state => {
+    try {
+      const socket = await getSocket();
+      socket.emit(CHAT_SEND, {
+        chatId,
+        type: message.type,
+        content: message.content,
+        clientTempId: tempId,
+      });
+    } catch (err: any) {
+      console.error('[ChatStore] socket emit failed', err.message);
+    }
+  },
+  
+  markChatAsRead: (chatId) => {
+    // Emit read receipt to server
+    getSocket()
+      .then(socket => {
+        const lastMsg = (get().messages[chatId] || []).slice(-1)[0];
+        if (lastMsg) {
+          socket.emit(CHAT_READ, { chatId, messageId: lastMsg.id });
+        }
+      })
+      .catch(() => {});
+
+    return set(state => {
       const updatedChats = state.chats.map(chat => {
         if (chat.id === chatId) {
           return {
             ...chat,
             lastMessage: {
-              type: newMessage.type,
-              content: newMessage.type === 'text' ? newMessage.content : 'Sent a Snap',
-              timestamp: newMessage.timestamp,
-              isRead: false,
+              ...chat.lastMessage,
+              isRead: true,
             },
-            unreadCount: chat.unreadCount, // current user's sent msg shouldn't increase own unread
-          } as Chat & { user: User };
+            unreadCount: 0,
+          };
         }
         return chat;
       });
-
-      const existing = state.messages[chatId] || [];
-      // avoid adding duplicate message (can happen because we optimistically add right after INSERT)
-      const alreadyExists = existing.some(m => m.id === newMessage.id);
-      if (alreadyExists) {
-        console.log('[ChatStore] Duplicate message from realtime, ignoring:', newMessage.id);
-        return {
-          chats: updatedChats,
-        };
-      }
-
-      console.log('[ChatStore] Adding message from realtime:', newMessage.id);
-
-      return {
-        messages: {
-          ...state.messages,
-          [chatId]: [...existing, newMessage],
-        },
-        chats: updatedChats,
+      
+      const updatedMessages = { 
+        ...state.messages,
+        [chatId]: (state.messages[chatId] || []).map(message => ({
+          ...message,
+          isRead: true,
+        }))
       };
+      
+      return { chats: updatedChats, messages: updatedMessages };
     });
   },
-  
-  markChatAsRead: (chatId) => set(state => {
-    const updatedChats = state.chats.map(chat => {
-      if (chat.id === chatId) {
-        return {
-          ...chat,
-          lastMessage: {
-            ...chat.lastMessage,
-            isRead: true,
-          },
-          unreadCount: 0,
-        };
-      }
-      return chat;
-    });
-    
-    const updatedMessages = { 
-      ...state.messages,
-      [chatId]: (state.messages[chatId] || []).map(message => ({
-        ...message,
-        isRead: true,
-      }))
-    };
-    
-    return { chats: updatedChats, messages: updatedMessages };
-  }),
   
   expireMessage: (chatId, messageId) => set(state => {
     const updatedMessages = { 
@@ -273,54 +264,52 @@ export const useChatStore = create<ChatState>((set, get) => ({
     return { messages: updatedMessages };
   }),
 
-  subscribeToChat: (chatId) => {
-    const { _subscriptions } = get() as any;
-    if (_subscriptions[chatId]) return; // already subscribed
-
-    const channel = supabase
-      .channel(`chat_${chatId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` }, (payload) => {
-        const newRow = payload.new as any;
-        const newMsg: Message = {
-          id: newRow.id.toString(),
-          chatId: chatId,
-          senderId: newRow.sender_id,
-          type: newRow.type,
-          content: newRow.content,
-          timestamp: newRow.timestamp,
-          isRead: false,
-        };
-
-        set(state => {
-          const existing = state.messages[chatId] || [];
-          // avoid adding duplicate message (can happen because we optimistically add right after INSERT)
-          const alreadyExists = existing.some(m => m.id === newMsg.id);
-          if (alreadyExists) {
-            console.log('[ChatStore] Duplicate message from realtime, ignoring:', newMsg.id);
-            return state;
-          }
-
-          console.log('[ChatStore] Adding message from realtime:', newMsg.id);
-
-          return {
-            messages: {
-              ...state.messages,
-              [chatId]: [...existing, newMsg],
-            },
-          };
-        });
-      })
-      .subscribe();
-
-    _subscriptions[chatId] = channel;
+  subscribeToChat: async (_chatId: string) => {
+    // No longer needed — server automatically places socket in rooms.
   },
 
-  unsubscribeFromChat: (chatId) => {
-    const { _subscriptions } = get() as any;
-    const ch = _subscriptions[chatId];
-    if (ch) {
-      supabase.removeChannel(ch);
-      delete _subscriptions[chatId];
-    }
+  unsubscribeFromChat: async (_chatId: string) => {
+    // No-op for Socket.IO implementation
   },
 }));
+
+// ---------------------------------------------
+// Socket.IO listeners – register once at module load
+// ---------------------------------------------
+(async () => {
+  try {
+    const socket = await getSocket();
+
+    // Handle new messages from server
+    socket.on(CHAT_NEW, (msg: ChatNewPayload) => {
+      useChatStore.setState(state => {
+        const existing = state.messages[msg.chatId] || [];
+        // Replace optimistic if temp id present
+        const withoutTemp = existing.filter(m => m.id !== msg.id && !m.id.startsWith('temp-'));
+        return {
+          messages: {
+            ...state.messages,
+            [msg.chatId]: [...withoutTemp, msg],
+          },
+        };
+      });
+    });
+
+    // Handle read receipts
+    socket.on(CHAT_READ, ({ chatId, messageId }: ChatReadPayload) => {
+      useChatStore.setState(state => {
+        const updatedMsgs = (state.messages[chatId] || []).map(m => m.id === messageId ? { ...m, isRead: true } : m);
+        return { messages: { ...state.messages, [chatId]: updatedMsgs } };
+      });
+    });
+
+    // Handle typing indicator
+    socket.on(CHAT_TYPING, ({ chatId, isTyping }) => {
+      useChatStore.setState(state => ({
+        typingIndicators: { ...state.typingIndicators, [chatId]: isTyping },
+      }));
+    });
+  } catch (err: any) {
+    console.error('[ChatStore] Failed to initialize socket listeners', err?.message);
+  }
+})();

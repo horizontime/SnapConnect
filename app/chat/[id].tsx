@@ -10,17 +10,20 @@ import { formatTimestamp } from '@/utils/timeUtils';
 import { Camera, Send } from 'lucide-react-native';
 import { Message } from '@/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getSocket } from '@/utils/socket';
+import { CHAT_TYPING } from '@/shared/chatEvents';
 
 export default function ChatScreen() {
   const { id, userId } = useLocalSearchParams<{ id: string; userId: string }>();
   const router = useRouter();
-  const { messages, sendMessage, markChatAsRead, currentChatId, setCurrentChatId, fetchMessages } = useChatStore();
+  const { messages, typingIndicators, sendMessage, markChatAsRead, currentChatId, setCurrentChatId, fetchMessages } = useChatStore();
   const { getFriendById } = useFriendStore();
   const { userId: authUserId } = useAuthStore();
   
   const [text, setText] = useState('');
   const flatListRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
+  const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const friend = getFriendById(userId);
   const chatMessages = messages[id] || [];
@@ -49,6 +52,21 @@ export default function ChatScreen() {
     };
   }, [id]);
   
+  const emitTyping = async (isTyping: boolean) => {
+    try {
+      const socket = await getSocket();
+      socket.emit(CHAT_TYPING, { chatId: id, isTyping });
+    } catch {}
+  };
+
+  const onChangeText = (val: string) => {
+    setText(val);
+
+    emitTyping(true);
+    if (typingTimeout.current) clearTimeout(typingTimeout.current);
+    typingTimeout.current = setTimeout(() => emitTyping(false), 1500);
+  };
+
   const handleSend = () => {
     if (!text.trim()) return;
     
@@ -149,7 +167,7 @@ export default function ChatScreen() {
             style={styles.input}
             placeholder="Message"
             value={text}
-            onChangeText={setText}
+            onChangeText={onChangeText}
             multiline
           />
           
@@ -161,6 +179,14 @@ export default function ChatScreen() {
             <Send size={20} color={text.trim() ? colors.card : colors.inactive} />
           </TouchableOpacity>
         </View>
+
+        {typingIndicators[id] && (
+          <View style={{ paddingHorizontal: 16, paddingBottom: 4 }}>
+            <Text style={{ color: colors.textLight, fontStyle: 'italic' }}>
+              {friend?.displayName || 'Friend'} is typing...
+            </Text>
+          </View>
+        )}
       </KeyboardAvoidingView>
     </>
   );
