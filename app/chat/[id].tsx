@@ -40,6 +40,18 @@ export default function ChatScreen() {
     };
   }, [id]);
   
+  useEffect(() => {
+    if (chatMessages.length === 0) return;
+
+    const hasUnreadFromOther = chatMessages.some(
+      (m) => String(m.senderId) !== String(authUserId) && !m.isRead
+    );
+
+    if (hasUnreadFromOther) {
+      markChatAsRead(id);
+    }
+  }, [chatMessages, authUserId]);
+  
   const emitTyping = async (isTyping: boolean) => {
     try {
       const socket = await getSocket();
