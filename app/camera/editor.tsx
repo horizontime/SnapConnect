@@ -11,6 +11,7 @@ import { Type, Smile, Upload } from 'lucide-react-native';
 import { uploadMedia, createStory } from '@/utils/supabase';
 import { generateThumbnail } from '@/utils/upload';
 import { useAuthStore } from '@/store/authStore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SnapEditorScreen() {
   const { mediaUri, mediaType } = useLocalSearchParams<{
@@ -22,6 +23,9 @@ export default function SnapEditorScreen() {
 
   const [overlays, setOverlays] = React.useState<OverlayData[]>([]);
   const viewShotRef = React.useRef<ViewShot>(null);
+
+  // Safe area for bottom navigation / gesture bar
+  const insets = useSafeAreaInsets();
 
   if (!mediaUri) {
     return null;
@@ -144,7 +148,13 @@ export default function SnapEditorScreen() {
       </ViewShot>
 
       {/* Toolbar */}
-      <View style={styles.toolbar}>
+      <View style={[
+        styles.toolbar,
+        {
+          paddingBottom: 12 + insets.bottom, // ensure content sits above system nav bar
+          bottom: insets.bottom, // lift the toolbar when a bottom inset is present
+        },
+      ]}>
         <TouchableOpacity style={styles.toolButton} onPress={addCaption}>
           <Type color="#fff" size={24} />
         </TouchableOpacity>
