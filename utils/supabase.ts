@@ -120,20 +120,6 @@ export async function uploadMedia(
     
     console.log(`[uploadMedia] File exists. Size: ${fileInfo.size} bytes`);
     
-    // Read file as base64 for Android compatibility
-    console.log(`[uploadMedia] Reading file as base64...`);
-    const base64 = await FileSystem.readAsStringAsync(fileUri, { 
-      encoding: FileSystem.EncodingType.Base64 
-    });
-    
-    // Convert base64 to blob
-    const byteCharacters = atob(base64);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
-    
     // Determine content type based on file extension
     const fileExtension = fileName.split('.').pop()?.toLowerCase();
     let contentType = 'image/jpeg'; // default
@@ -141,8 +127,7 @@ export async function uploadMedia(
     else if (fileExtension === 'mp4') contentType = 'video/mp4';
     else if (fileExtension === 'mov') contentType = 'video/quicktime';
     
-    const blob = new Blob([byteArray], { type: contentType });
-    console.log(`[uploadMedia] Created blob. Size: ${blob.size} bytes, Type: ${contentType}`);
+    console.log(`[uploadMedia] Content type: ${contentType}`);
 
     const filePath = `${Date.now()}_${fileName}`;
     console.log(`[uploadMedia] Uploading to path: ${filePath}`);
@@ -159,27 +144,44 @@ export async function uploadMedia(
     
     console.log(`[uploadMedia] Bucket ${bucket} is accessible`);
 
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .upload(filePath, blob, {
-        cacheControl: '3600',
-        upsert: false,
-        contentType,
-      });
+    // Create FormData for file upload
+    const formData = new FormData();
+    formData.append('', {
+      uri: fileUri,
+      name: fileName,
+      type: contentType,
+    } as any);
 
-    if (error) {
-      console.error(`[uploadMedia] Upload failed:`, error);
-      throw error;
+    // Upload using the Supabase storage API's REST endpoint directly
+    const uploadUrl = `${supabaseUrl}/storage/v1/object/${bucket}/${filePath}`;
+    console.log(`[uploadMedia] Uploading to URL: ${uploadUrl}`);
+
+    // Use the logged-in user's JWT so that the request runs as the
+    // "authenticated" role and passes RLS checks. If no session is
+    // available yet (e.g. user not logged in), fall back to the anon key.
+
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token ?? supabaseAnonKey;
+
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'apikey': supabaseAnonKey,
+      },
+      body: formData,
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      console.error(`[uploadMedia] Upload failed with status ${uploadResponse.status}: ${errorText}`);
+      throw new Error(`Upload failed: ${uploadResponse.status} ${errorText}`);
     }
-    
-    if (!data?.path) {
-      throw new Error('Upload succeeded but no path returned');
-    }
 
-    console.log(`[uploadMedia] Upload successful. Path: ${data.path}`);
+    console.log(`[uploadMedia] Upload successful`);
 
-    // Supabase JS v2 getPublicUrl
-    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
+    // Get the public URL
+    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
 
     if (!urlData?.publicUrl) {
       throw new Error('Cannot resolve public URL');
@@ -190,7 +192,7 @@ export async function uploadMedia(
     // Progress: since we use fetch->blob, we cannot track native upload progress here.
     if (onProgress) onProgress(100);
 
-    return { publicUrl: urlData.publicUrl, path: data.path };
+    return { publicUrl: urlData.publicUrl, path: filePath };
   } catch (error) {
     console.error(`[uploadMedia] Error details:`, error);
     if (error instanceof Error) {
