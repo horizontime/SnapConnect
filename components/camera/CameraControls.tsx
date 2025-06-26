@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Pressable } from 'react-native';
 import { Image } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
+import RecordingProgressRing from './RecordingProgressRing';
 
 interface CameraControlsProps {
   onCapture: () => void;
@@ -10,6 +11,7 @@ interface CameraControlsProps {
   onFlip: () => void;
   onFilterToggle: () => void;
   isRecording: boolean;
+  recordingProgress?: number;
 }
 
 export const CameraControls: React.FC<CameraControlsProps> = ({
@@ -19,6 +21,7 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
   onFlip,
   onFilterToggle,
   isRecording,
+  recordingProgress = 0,
 }) => {
   return (
     <View style={styles.container}>
@@ -34,15 +37,20 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
       </View>
       
       <View style={styles.bottomControls}>
-        <Pressable 
-          style={[styles.captureButton, isRecording && styles.recordingButton]} 
-          onPress={onCapture}
-          onLongPress={onStartRecording}
-          onPressOut={isRecording ? onStopRecording : undefined}
-          delayLongPress={200}
-        >
-          {isRecording && <View style={styles.recordingIndicator} />}
-        </Pressable>
+        <View style={styles.captureWrapper}>
+          {isRecording && (
+            <RecordingProgressRing progress={recordingProgress} size={80} />
+          )}
+          <Pressable
+            style={[styles.captureButton, isRecording && styles.recordingButton]}
+            onPress={onCapture}
+            onLongPress={onStartRecording}
+            onPressOut={isRecording ? onStopRecording : undefined}
+            delayLongPress={200}
+          >
+            {isRecording && <View style={styles.recordingIndicator} />}
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -72,6 +80,12 @@ const styles = StyleSheet.create({
   },
   bottomControls: {
     alignItems: 'center',
+  },
+  captureWrapper: {
+    width: 80,
+    height: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   captureButton: {
     width: 70,

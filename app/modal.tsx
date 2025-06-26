@@ -13,13 +13,13 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFriendStore } from '@/store/friendStore';
-import { useChatStore } from '@/store/chatStore';
 import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/constants/colors';
-import { User, MessageType } from '@/types';
+import { User } from '@/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { ArrowLeft, Send, Check } from 'lucide-react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { uploadMedia, createSnap } from '@/utils/supabase';
 
 // Video preview component using expo-video
 function VideoPreview({ uri }: { uri: string }) {
@@ -40,7 +40,7 @@ function VideoPreview({ uri }: { uri: string }) {
 
 export default function ModalScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ screen?: string; mediaUri?: string; mediaType?: string }>();
+  const params = useLocalSearchParams<{ screen?: string; mediaUri?: string; mediaType?: string; overlayMeta?: string }>();
   
   // If not showing friend selection, show default modal
   if (params.screen !== 'selectFriends') {
@@ -59,9 +59,8 @@ export default function ModalScreen() {
 
 function SelectFriendsScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ mediaUri?: string; mediaType?: string }>();
+  const params = useLocalSearchParams<{ mediaUri?: string; mediaType?: string; overlayMeta?: string }>();
   const { friends, fetchFriends } = useFriendStore();
-  const { sendMessage, chats } = useChatStore();
   const { userId } = useAuthStore();
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [isSending, setIsSending] = useState(false);
@@ -85,33 +84,35 @@ function SelectFriendsScreen() {
       return;
     }
 
-    if (!params.mediaUri || !params.mediaType) {
-      Alert.alert('Error', 'No media to send');
+    if (!params.mediaUri || !params.mediaType || !userId) {
+      Alert.alert('Error', 'Missing media or user');
       return;
     }
 
     setIsSending(true);
 
     try {
-      // In a real app, we would upload the media to storage and get a URL
-      // For now, we'll just send the local URI
-      const messageType: MessageType = params.mediaType === 'video' ? 'video' : 'image';
-      
-      // Send to each selected friend
-      for (const friendId of selectedFriends) {
-        // Find existing chat with this friend or use a temporary ID
-        const existingChat = chats.find(chat => chat.userId === friendId);
-        const chatId = existingChat?.id || `temp_chat_${friendId}`;
-        
-        await sendMessage(chatId, {
-          type: messageType,
-          content: params.mediaUri,
-          senderId: userId || '', // From auth store
-        });
+      // Upload media to snaps bucket
+      const { publicUrl } = await uploadMedia('snaps', params.mediaUri);
+
+      // Parse overlay metadata if provided
+      let meta: any = null;
+      if (params.overlayMeta) {
+        try {
+          meta = JSON.parse(params.overlayMeta as string);
+        } catch {}
       }
 
+      await createSnap({
+        senderId: userId,
+        recipientIds: selectedFriends,
+        mediaUrl: publicUrl,
+        type: params.mediaType as 'image' | 'video',
+        overlayMeta: meta,
+      });
+
       Alert.alert(
-        'Sent!', 
+        'Sent!',
         `Snap sent to ${selectedFriends.length} friend${selectedFriends.length > 1 ? 's' : ''}`,
         [{ text: 'OK', onPress: () => router.back() }]
       );

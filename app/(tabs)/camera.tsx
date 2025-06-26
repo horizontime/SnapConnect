@@ -19,6 +19,8 @@ export default function CameraScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
+  const [recordingProgress, setRecordingProgress] = useState(0);
+  const progressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   
   if (!cameraPermission || !microphonePermission) {
     // Permissions are still loading
@@ -63,14 +65,13 @@ export default function CameraScreen() {
       });
       
       if (photo) {
-        // Navigate to friend selection with the photo
+        // Navigate to Snap Editor with the photo
         router.push({
-          pathname: '/modal',
-          params: { 
-            screen: 'selectFriends',
+          pathname: '/camera/editor' as any,
+          params: {
             mediaUri: photo.uri,
-            mediaType: 'image'
-          }
+            mediaType: 'image',
+          },
         });
       }
     } catch (error) {
@@ -84,20 +85,25 @@ export default function CameraScreen() {
     
     try {
       setIsRecording(true);
+      setRecordingProgress(0);
+      const startTime = Date.now();
+      progressInterval.current = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        setRecordingProgress(Math.min(elapsed / 15000, 1));
+      }, 100);
       recordingRef.current = await cameraRef.current.recordAsync({
-        maxDuration: 60, // 60 seconds max
+        maxDuration: 15, // 15 seconds max per spec
       });
       
       const video = await recordingRef.current;
       if (video) {
-        // Navigate to friend selection with the video
+        // Navigate to Snap Editor with the video
         router.push({
-          pathname: '/modal',
-          params: { 
-            screen: 'selectFriends',
+          pathname: '/camera/editor' as any,
+          params: {
             mediaUri: video.uri,
-            mediaType: 'video'
-          }
+            mediaType: 'video',
+          },
         });
       }
     } catch (error) {
@@ -106,12 +112,21 @@ export default function CameraScreen() {
     } finally {
       setIsRecording(false);
       recordingRef.current = null;
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
+        progressInterval.current = null;
+      }
+      setRecordingProgress(0);
     }
   };
   
   const handleStopRecording = () => {
     if (cameraRef.current && isRecording) {
       cameraRef.current.stopRecording();
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current);
+        progressInterval.current = null;
+      }
     }
   };
   
@@ -168,6 +183,7 @@ export default function CameraScreen() {
           onFlip={handleFlip}
           onFilterToggle={handleFilterToggle}
           isRecording={isRecording}
+          recordingProgress={recordingProgress}
         />
       )}
     </View>

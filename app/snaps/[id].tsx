@@ -1,0 +1,76 @@
+import React, { useEffect, useState } from 'react';
+import { View, Image, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { supabase } from '@/utils/supabase';
+import { useAuthStore } from '@/store/authStore';
+import { useSnapStore } from '@/store/snapStore';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import OverlayItem from '@/components/snap-editor/OverlayItem';
+
+export default function SnapViewer() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const { userId } = useAuthStore();
+  const { markViewed } = useSnapStore();
+
+  const [snap, setSnap] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSnap = async () => {
+      if (!id) return;
+      const { data, error } = await supabase.from('snaps').select('*').eq('id', id).single();
+      if (error) {
+        setLoading(false);
+        return;
+      }
+      setSnap(data);
+      setLoading(false);
+    };
+    fetchSnap();
+  }, [id]);
+
+  const handleClose = async () => {
+    if (id) {
+      await markViewed(id as string);
+    }
+    router.back();
+  };
+
+  if (loading) return null;
+  if (!snap) return (
+    <View style={styles.center}><Text>Snap not found</Text></View>
+  );
+
+  const overlayMeta = snap.overlay_meta ? JSON.parse(snap.overlay_meta) : [];
+
+  return (
+    <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
+      {snap.type === 'image' ? (
+        <Image source={{ uri: snap.media_url }} style={styles.media} resizeMode="contain" />
+      ) : (
+        <VideoPlayer uri={snap.media_url} />
+      )}
+
+      {/* Render overlays for video */}
+      {snap.type === 'video' && overlayMeta.map((ov: any) => (
+        <OverlayItem key={ov.id} data={ov} onUpdate={() => {}} editable={false} />
+      ))}
+
+      <TouchableOpacity style={styles.closeArea} onPress={handleClose} />
+    </View>
+  );
+}
+
+function VideoPlayer({ uri }: { uri: string }) {
+  const player = useVideoPlayer(uri, pl => { pl.play(); });
+  return <VideoView style={StyleSheet.absoluteFill} player={player} contentFit="contain" />;
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#000' },
+  media: { flex: 1 },
+  closeArea: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 },
+  center: { flex:1, alignItems:'center', justifyContent:'center' }
+}); 

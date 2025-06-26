@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, FlatList, Text, TouchableOpacity } from 'react-native';
 import { useChatStore } from '@/store/chatStore';
+import { useSnapStore } from '@/store/snapStore';
 import { ChatListItem } from '@/components/chat/ChatListItem';
 import { colors } from '@/constants/colors';
 import { useRouter } from 'expo-router';
@@ -8,6 +9,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useFriendStore } from '@/store/friendStore';
 import { FriendListItem } from '@/components/friend/FriendListItem';
 import { supabase } from '@/utils/supabase';
+import SnapListItem from '@/components/snap/SnapListItem';
 
 type StoryListItem = {
   id: string;
@@ -24,6 +26,7 @@ export default function ChatsScreen() {
   const { userId } = useAuthStore();
   const { getChatsWithUserData, fetchChats } = useChatStore();
   const { friends, fetchFriends } = useFriendStore();
+  const { snaps, fetchSnaps, subscribeToSnaps } = useSnapStore();
   const [view, setView] = useState<'snaps' | 'chats' | 'friends'>("chats");
   
   const chatsWithUserData = getChatsWithUserData();
@@ -86,7 +89,11 @@ export default function ChatsScreen() {
   useEffect(() => {
     fetchChats();
     fetchFriends();
-  }, []);
+    if (userId) {
+      fetchSnaps(userId);
+      subscribeToSnaps(userId);
+    }
+  }, [userId]);
 
   useEffect(() => {
     if (view === 'friends') {
@@ -112,7 +119,15 @@ export default function ChatsScreen() {
   const textChats = chatsWithUserData.filter(c => c.lastMessage.type === 'text');
   const displayChats = [...textChats, ...friendChats];
 
-  const snaps = chatsWithUserData.filter(c => c.lastMessage.type !== 'text');
+  // Build display snaps from snap store with sender info
+  const displaySnaps = snaps.map(s => ({
+    id: s.id,
+    senderName: s.sender?.display_name || 'Unknown',
+    senderUsername: s.sender?.username || '',
+    senderAvatar: s.sender?.avatar || '',
+    createdAt: s.created_at,
+    type: s.type as 'image' | 'video',
+  }));
 
   return (
     <View style={styles.container}>
@@ -139,18 +154,17 @@ export default function ChatsScreen() {
 
       {view === 'snaps' ? (
         <FlatList
-          data={snaps}
+          data={displaySnaps}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <ChatListItem
+            <SnapListItem
               id={item.id}
-              username={item.user.username}
-              displayName={item.user.displayName}
-              avatar={item.user.avatar}
-              lastMessage={item.lastMessage}
-              unreadCount={item.unreadCount}
-              isOnline={item.user.isOnline}
-              onPress={() => navigateToChat(item.id, item.user.id)}
+              senderName={item.senderName}
+              senderUsername={item.senderUsername}
+              senderAvatar={item.senderAvatar}
+              createdAt={item.createdAt}
+              type={item.type}
+              onPress={() => router.push(`/snaps/${item.id}` as any)}
             />
           )}
           ItemSeparatorComponent={() => <View style={styles.separator} />}

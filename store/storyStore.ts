@@ -13,7 +13,8 @@ type StoryState = {
   markStoryAsViewed: (storyId: string) => void;
   getMyStories: (userId: string) => Story[];
   getFriendsStories: (userId: string) => (Story & { user: User })[];
-  fetchStories: () => Promise<void>;
+  fetchStories: (userId?: string) => Promise<void>;
+  subscribeToRealtime: (userId: string) => void;
 };
 
 export const useStoryStore = create<StoryState>((set, get) => ({
@@ -88,19 +89,62 @@ export const useStoryStore = create<StoryState>((set, get) => ({
   },
   
   // Fetch stories from Supabase (replaces mock data when available)
-  fetchStories: async () => {
+  fetchStories: async (userId) => {
     const { data, error } = await supabase
       .from('stories')
       .select('*, user:profiles(*)')
-      .order('last_updated', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('[StoryStore] Failed to fetch stories', error.message);
       return;
     }
 
-    if (data) {
-      set({ stories: data as unknown as Story[] });
+    let stories: any[] = data || [];
+
+    if (userId) {
+      const { data: views } = await supabase
+        .from('story_views')
+        .select('story_id')
+        .eq('viewer_id', userId);
+
+      const viewedIds = new Set((views || []).map(v => v.story_id));
+      stories = stories.map(s => ({ ...s, viewed: viewedIds.has(s.id) }));
     }
+
+    // ensure lastUpdated field exists for ordering
+    stories = stories.map((s: any) => ({
+      ...s,
+      lastUpdated: s.lastUpdated || s.created_at || new Date().toISOString(),
+    }));
+
+    set({ stories });
+  },
+
+  subscribeToRealtime: (userId: string) => {
+    const channel = supabase.channel('rt-stories');
+
+    // New story snap inserted
+    channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'stories' }, payload => {
+      const story = payload.new as any;
+      // If story belongs to current user or a friend
+      get().fetchStories(userId);
+    });
+
+    // Story deleted (expired)
+    channel.on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'stories' }, payload => {
+      const id = payload.old.id;
+      set({ stories: get().stories.filter(s => s.id !== id) });
+    });
+
+    // Story views
+    channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'story_views' }, payload => {
+      const { story_id, viewer_id } = payload.new as any;
+      if (viewer_id === userId) {
+        set({ stories: get().stories.map(s => s.id === story_id ? { ...s, viewed: true } : s) });
+      }
+    });
+
+    channel.subscribe();
   },
 }));

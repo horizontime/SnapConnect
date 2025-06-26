@@ -1,12 +1,11 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, FlatList, Text, TouchableOpacity, Image } from 'react-native';
+import { View, StyleSheet, FlatList, Text, TouchableOpacity } from 'react-native';
 import { useStoryStore } from '@/store/storyStore';
 import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/constants/colors';
 import { useRouter } from 'expo-router';
-import { Avatar } from '@/components/ui/Avatar';
-import { formatStoryTimestamp } from '@/utils/timeUtils';
 import { StoryThumbnail } from '@/components/story/StoryThumbnail';
+import StoryCard from '@/components/story/StoryCard';
 
 export default function StoriesScreen() {
   const router = useRouter();
@@ -15,14 +14,24 @@ export default function StoriesScreen() {
   
   // Only include stories that contain at least one item to avoid runtime errors
   const friendsStories = userId
-    ? getFriendsStories(userId).filter((story) => story.items && story.items.length > 0)
+    ? getFriendsStories(userId)
+        .filter((s) => s.items && s.items.length > 0)
+        .sort((a, b) => {
+          if (a.viewed !== b.viewed) return a.viewed ? 1 : -1; // unviewed first
+          return new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime();
+        })
     : [];
   
   const myStories = userId ? getMyStories(userId) : [];
   
   useEffect(() => {
-    fetchStories();
-  }, []);
+    fetchStories(userId ?? undefined);
+    if (userId) {
+      import('@/store/storyStore').then(({ useStoryStore }) => {
+        useStoryStore.getState().subscribeToRealtime(userId);
+      });
+    }
+  }, [userId]);
   
   const navigateToStory = (storyId: string) => {
     router.push(`/story/${storyId}`);
@@ -33,51 +42,23 @@ export default function StoriesScreen() {
       <FlatList
         data={friendsStories}
         keyExtractor={(item) => item.id}
+        numColumns={2}
         renderItem={({ item }) => {
-          // Safeguard against stories that somehow passed the filter but still have no items
-          const firstItem = item.items?.[0];
-          if (!firstItem) return null;
-
+          const firstItem = item.items?.[item.items.length - 1];
+          const preview = firstItem?.url || (item as any).thumbnail_url || (item as any).media_url || '';
+          if (!preview) return null;
           return (
-            <TouchableOpacity
-              style={styles.storyCard}
+            <StoryCard
+              id={item.id}
+              username={item.user.displayName}
+              avatar={item.user.avatar}
+              previewUrl={preview}
+              hasStory={true}
+              isViewed={item.viewed}
               onPress={() => navigateToStory(item.id)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.storyHeader}>
-                <Avatar
-                  source={item.user.avatar}
-                  size={40}
-                  showOnlineBadge={true}
-                  isOnline={item.user.isOnline}
-                />
-                <View style={styles.storyInfo}>
-                  <Text style={styles.username}>{item.user.displayName}</Text>
-                  <Text style={styles.timestamp}>
-                    {formatStoryTimestamp(item.lastUpdated)}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.storyPreview}>
-                <Image
-                  source={{ uri: firstItem.url }}
-                  style={styles.previewImage}
-                  resizeMode="cover"
-                />
-                {firstItem.caption && (
-                  <View style={styles.captionContainer}>
-                    <Text style={styles.caption} numberOfLines={2}>
-                      {firstItem.caption}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </TouchableOpacity>
+            />
           );
         }}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        contentContainerStyle={styles.listContent}
         ListHeaderComponent={() => (
           <View style={styles.headerContainer}>
             <StoryThumbnail
@@ -88,7 +69,11 @@ export default function StoriesScreen() {
               isViewed={false}
               isCurrentUser={true}
               onPress={() => {
-                /* Add story functionality to be implemented */
+                if (myStories.length === 0) {
+                  router.push('/(tabs)/camera');
+                } else {
+                  navigateToStory(myStories[0].id);
+                }
               }}
             />
           </View>
@@ -99,6 +84,7 @@ export default function StoriesScreen() {
             <Text style={styles.emptySubtext}>Your friends' stories will appear here</Text>
           </View>
         )}
+        contentContainerStyle={styles.listContent}
       />
     </View>
   );
@@ -110,58 +96,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   listContent: {
-    padding: 16,
-  },
-  storyCard: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  storyHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-  },
-  storyInfo: {
-    marginLeft: 12,
-  },
-  username: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  timestamp: {
-    fontSize: 12,
-    color: colors.textLight,
-    marginTop: 2,
-  },
-  storyPreview: {
-    position: 'relative',
-  },
-  previewImage: {
-    width: '100%',
-    height: 300,
-    backgroundColor: colors.border,
-  },
-  captionContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: 12,
-  },
-  caption: {
-    color: colors.card,
-    fontSize: 14,
-  },
-  separator: {
-    height: 16,
+    padding: 8,
   },
   emptyContainer: {
     alignItems: 'center',

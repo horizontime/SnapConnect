@@ -41,44 +41,154 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 }); 
 
 // Helper function to ensure storage bucket exists
-export async function ensureStorageBucket() {
+export async function ensureMediaBuckets() {
   try {
+    const requiredBuckets = ['snaps', 'stories'];
     const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-    
+
     if (listError) {
       console.error('Error listing buckets:', listError);
       return false;
     }
-    
-    const bucketExists = buckets?.some(bucket => bucket.name === 'user-content');
-    
-    if (!bucketExists) {
-      console.log('Creating user-content bucket...');
-      const { error: createError } = await supabase.storage.createBucket('user-content', {
-        public: true,
-        fileSizeLimit: 5242880, // 5MB
-        allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
-      });
-      
-      if (createError) {
-        if (createError.message.includes('already exists')) {
-          console.log('Bucket already exists');
-          return true;
+
+    const existingBucketNames = buckets?.map((b) => b.name) ?? [];
+
+    for (const bucketName of requiredBuckets) {
+      if (!existingBucketNames.includes(bucketName)) {
+        console.log(`[Supabase] Creating ${bucketName} bucket…`);
+        const { error: createError } = await supabase.storage.createBucket(bucketName, {
+          public: true,
+          // 50 MB per file limit – videos can be bigger than images
+          fileSizeLimit: bucketName === 'snaps' ? 104857600 /* 100 MB */ : 52428800 /* 50 MB */,
+          allowedMimeTypes: [
+            'image/jpeg',
+            'image/png',
+            'image/webp',
+            'video/mp4',
+            'video/quicktime',
+          ],
+        });
+
+        if (createError && !createError.message.includes('already exists')) {
+          console.error(`[Supabase] Error creating ${bucketName} bucket`, createError);
+          return false;
         }
-        console.error('Error creating bucket:', createError);
-        return false;
+
+        console.log(`[Supabase] ${bucketName} bucket is ready`);
       }
-      
-      console.log('Bucket created successfully');
-      
-      // Set CORS policy for the bucket
-      // Note: This might need to be done through Supabase dashboard
-      // as the API might not support it directly
     }
-    
+
     return true;
   } catch (error) {
-    console.error('Error in ensureStorageBucket:', error);
+    console.error('Error in ensureMediaBuckets:', error);
     return false;
   }
+}
+
+// 🛑 DEPRECATED: kept for backward-compatibility with legacy calls
+export const ensureStorageBucket = ensureMediaBuckets;
+
+/** -----------------------------------------
+ * Upload Helpers (Phase 4)
+ * -----------------------------------------*/
+
+export interface UploadResult {
+  publicUrl: string;
+  path: string;
+}
+
+/**
+ * Upload a local file (photo or video) to the specified storage bucket.
+ * Returns the public URL on success.
+ */
+export async function uploadMedia(
+  bucket: 'snaps' | 'stories',
+  fileUri: string,
+  onProgress?: (percent: number) => void,
+): Promise<UploadResult> {
+  const fileName = fileUri.split('/').pop() || `${Date.now()}`;
+
+  const fileRes = await fetch(fileUri);
+  const blob = await fileRes.blob();
+
+  const filePath = `${Date.now()}_${fileName}`;
+
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .upload(filePath, blob, {
+      cacheControl: '3600',
+      upsert: false,
+    });
+
+  if (error || !data?.path) {
+    throw error || new Error('Failed to upload');
+  }
+
+  // Supabase JS v2 getPublicUrl
+  const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
+
+  if (!urlData?.publicUrl) {
+    throw new Error('Cannot resolve public URL');
+  }
+
+  // Progress: since we use fetch->blob, we cannot track native upload progress here.
+  if (onProgress) onProgress(100);
+
+  return { publicUrl: urlData.publicUrl, path: data.path };
+}
+
+/**
+ * Insert a row into `snaps` table.
+ */
+export async function createSnap(params: {
+  senderId: string;
+  recipientIds: string[];
+  mediaUrl: string;
+  type: 'image' | 'video';
+  overlayMeta?: any;
+  expiresInHours?: number;
+}) {
+  const { senderId, recipientIds, mediaUrl, type, overlayMeta, expiresInHours = 24 } = params;
+
+  const expires_at = new Date(Date.now() + expiresInHours * 3600 * 1000).toISOString();
+
+  const { error } = await supabase.from('snaps').insert({
+    sender_id: senderId,
+    recipient_ids: recipientIds,
+    media_url: mediaUrl,
+    type,
+    overlay_meta: overlayMeta ?? null,
+    expires_at,
+  });
+
+  if (error) throw error;
+}
+
+/**
+ * Insert a snap into the `stories` table.
+ */
+export async function createStory(params: {
+  userId: string;
+  mediaUrl: string;
+  thumbnailUrl?: string;
+  type: 'image' | 'video';
+  caption?: string;
+  metadata?: any;
+  expiresInHours?: number;
+}) {
+  const { userId, mediaUrl, thumbnailUrl, type, caption, metadata, expiresInHours = 24 } = params;
+
+  const expires_at = new Date(Date.now() + expiresInHours * 3600 * 1000).toISOString();
+
+  const { error } = await supabase.from('stories').insert({
+    user_id: userId,
+    media_url: mediaUrl,
+    thumbnail_url: thumbnailUrl ?? null,
+    type,
+    caption: caption ?? null,
+    metadata: metadata ?? null,
+    expires_at,
+  });
+
+  if (error) throw error;
 } 
