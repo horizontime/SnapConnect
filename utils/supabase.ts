@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
 
 // Ensure you have these two variables defined in your .env or app.config.js
 import Constants from 'expo-constants';
@@ -102,35 +103,102 @@ export async function uploadMedia(
   fileUri: string,
   onProgress?: (percent: number) => void,
 ): Promise<UploadResult> {
+  console.log(`[uploadMedia] Starting upload to ${bucket} bucket`);
+  console.log(`[uploadMedia] File URI: ${fileUri}`);
+  console.log(`[uploadMedia] Supabase URL: ${supabaseUrl}`);
+  
   const fileName = fileUri.split('/').pop() || `${Date.now()}`;
 
-  const fileRes = await fetch(fileUri);
-  const blob = await fileRes.blob();
-
-  const filePath = `${Date.now()}_${fileName}`;
-
-  const { data, error } = await supabase.storage
-    .from(bucket)
-    .upload(filePath, blob, {
-      cacheControl: '3600',
-      upsert: false,
+  try {
+    // First, verify the file exists
+    console.log(`[uploadMedia] Checking if file exists...`);
+    const fileInfo = await FileSystem.getInfoAsync(fileUri);
+    
+    if (!fileInfo.exists) {
+      throw new Error(`File not found at URI: ${fileUri}`);
+    }
+    
+    console.log(`[uploadMedia] File exists. Size: ${fileInfo.size} bytes`);
+    
+    // Read file as base64 for Android compatibility
+    console.log(`[uploadMedia] Reading file as base64...`);
+    const base64 = await FileSystem.readAsStringAsync(fileUri, { 
+      encoding: FileSystem.EncodingType.Base64 
     });
+    
+    // Convert base64 to blob
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    
+    // Determine content type based on file extension
+    const fileExtension = fileName.split('.').pop()?.toLowerCase();
+    let contentType = 'image/jpeg'; // default
+    if (fileExtension === 'png') contentType = 'image/png';
+    else if (fileExtension === 'mp4') contentType = 'video/mp4';
+    else if (fileExtension === 'mov') contentType = 'video/quicktime';
+    
+    const blob = new Blob([byteArray], { type: contentType });
+    console.log(`[uploadMedia] Created blob. Size: ${blob.size} bytes, Type: ${contentType}`);
 
-  if (error || !data?.path) {
-    throw error || new Error('Failed to upload');
+    const filePath = `${Date.now()}_${fileName}`;
+    console.log(`[uploadMedia] Uploading to path: ${filePath}`);
+
+    // Check if bucket is accessible first
+    const { data: listData, error: listError } = await supabase.storage
+      .from(bucket)
+      .list('', { limit: 1 });
+    
+    if (listError) {
+      console.error(`[uploadMedia] Bucket access check failed:`, listError);
+      throw new Error(`Cannot access ${bucket} bucket: ${listError.message}`);
+    }
+    
+    console.log(`[uploadMedia] Bucket ${bucket} is accessible`);
+
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(filePath, blob, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType,
+      });
+
+    if (error) {
+      console.error(`[uploadMedia] Upload failed:`, error);
+      throw error;
+    }
+    
+    if (!data?.path) {
+      throw new Error('Upload succeeded but no path returned');
+    }
+
+    console.log(`[uploadMedia] Upload successful. Path: ${data.path}`);
+
+    // Supabase JS v2 getPublicUrl
+    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
+
+    if (!urlData?.publicUrl) {
+      throw new Error('Cannot resolve public URL');
+    }
+
+    console.log(`[uploadMedia] Public URL: ${urlData.publicUrl}`);
+
+    // Progress: since we use fetch->blob, we cannot track native upload progress here.
+    if (onProgress) onProgress(100);
+
+    return { publicUrl: urlData.publicUrl, path: data.path };
+  } catch (error) {
+    console.error(`[uploadMedia] Error details:`, error);
+    if (error instanceof Error) {
+      console.error(`[uploadMedia] Error message: ${error.message}`);
+      console.error(`[uploadMedia] Error stack:`, error.stack);
+    }
+    throw error;
   }
-
-  // Supabase JS v2 getPublicUrl
-  const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
-
-  if (!urlData?.publicUrl) {
-    throw new Error('Cannot resolve public URL');
-  }
-
-  // Progress: since we use fetch->blob, we cannot track native upload progress here.
-  if (onProgress) onProgress(100);
-
-  return { publicUrl: urlData.publicUrl, path: data.path };
 }
 
 /**
@@ -146,18 +214,42 @@ export async function createSnap(params: {
 }) {
   const { senderId, recipientIds, mediaUrl, type, overlayMeta, expiresInHours = 24 } = params;
 
+  console.log('[createSnap] Creating snap with params:', {
+    senderId,
+    recipientIds,
+    mediaUrl,
+    type,
+    overlayMeta,
+    expiresInHours
+  });
+
   const expires_at = new Date(Date.now() + expiresInHours * 3600 * 1000).toISOString();
 
-  const { error } = await supabase.from('snaps').insert({
+  const insertData = {
     sender_id: senderId,
     recipient_ids: recipientIds,
     media_url: mediaUrl,
     type,
     overlay_meta: overlayMeta ?? null,
     expires_at,
-  });
+  };
 
-  if (error) throw error;
+  console.log('[createSnap] Inserting data:', insertData);
+
+  const { error } = await supabase.from('snaps').insert(insertData);
+
+  if (error) {
+    console.error('[createSnap] Database insert failed:', error);
+    console.error('[createSnap] Error details:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    });
+    throw error;
+  }
+
+  console.log('[createSnap] Snap created successfully');
 }
 
 /**
@@ -187,4 +279,57 @@ export async function createStory(params: {
   });
 
   if (error) throw error;
-} 
+}
+
+/**
+ * Test Supabase connection and log diagnostic information
+ */
+export async function testSupabaseConnection() {
+  console.log('[Network Test] Starting Supabase connection test...');
+  console.log('[Network Test] Supabase URL:', supabaseUrl);
+  
+  try {
+    // Test 1: Check storage bucket access
+    console.log('[Network Test] Test 1: Checking storage buckets...');
+    const buckets = ['snaps', 'stories'];
+    
+    for (const bucket of buckets) {
+      const { error } = await supabase.storage.from(bucket).list('', { limit: 1 });
+      
+      if (error) {
+        console.error(`[Network Test] ✗ ${bucket} bucket error:`, error.message);
+        console.error(`[Network Test] ${bucket} bucket error details:`, error);
+      } else {
+        console.log(`[Network Test] ✓ ${bucket} bucket is accessible`);
+      }
+    }
+    
+    // Test 2: Check database access
+    console.log('[Network Test] Test 2: Checking database access...');
+    const { error: dbError } = await supabase.from('snaps').select('id').limit(1);
+    
+    if (dbError) {
+      console.error('[Network Test] ✗ Database error:', dbError.message);
+      console.error('[Network Test] Database error details:', dbError);
+    } else {
+      console.log('[Network Test] ✓ Database is accessible');
+    }
+    
+    // Test 3: Check auth status
+    console.log('[Network Test] Test 3: Checking authentication...');
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError) {
+      console.warn('[Network Test] Auth check failed:', authError.message);
+    } else {
+      console.log('[Network Test] ✓ Authentication working. User:', user?.id || 'No user logged in');
+    }
+    
+    console.log('[Network Test] All tests completed');
+    return true;
+    
+  } catch (error) {
+    console.error('[Network Test] Connection test failed:', error);
+    return false;
+  }
+}

@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { colors } from "@/constants/colors";
 import * as NavigationBar from "expo-navigation-bar";
 import { Platform } from "react-native";
-import { ensureMediaBuckets } from "@/utils/supabase";
+import { ensureMediaBuckets, testSupabaseConnection } from "@/utils/supabase";
 
 export const unstable_settings = {
   initialRouteName: "(tabs)",
@@ -40,8 +40,16 @@ export default function RootLayout() {
       NavigationBar.setButtonStyleAsync('dark');
     }
     
-    // Ensure storage buckets exist
+    // Ensure media buckets exist
     ensureMediaBuckets().catch(console.error);
+    
+    // Run network diagnostics in development
+    if (__DEV__) {
+      console.log('[App] Running network diagnostics...');
+      testSupabaseConnection().then(result => {
+        console.log('[App] Network diagnostic completed:', result ? 'SUCCESS' : 'FAILED');
+      }).catch(console.error);
+    }
   }, []);
 
   if (!loaded) {

@@ -12,6 +12,7 @@ import { uploadMedia, createStory } from '@/utils/supabase';
 import { generateThumbnail } from '@/utils/upload';
 import { useAuthStore } from '@/store/authStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as FileSystem from 'expo-file-system';
 
 export default function SnapEditorScreen() {
   const { mediaUri, mediaType } = useLocalSearchParams<{
@@ -71,17 +72,43 @@ export default function SnapEditorScreen() {
     console.log('handleContinue called. mediaType:', mediaType);
     if (mediaType === 'image') {
       try {
-        const uri = await viewShotRef.current?.capture?.();
-        console.log('Captured image URI:', uri);
-        if (uri) {
-          // Construct URL with query parameters
-          const encodedUri = encodeURIComponent(uri);
+        // Capture the view
+        const tempUri = await viewShotRef.current?.capture?.();
+        
+        if (tempUri) {
+          console.log('Captured temp image URI:', tempUri);
+          
+          // Small delay to ensure file is fully written
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Copy to a persistent location
+          const fileName = `snap_${Date.now()}.png`;
+          const persistentUri = `${FileSystem.documentDirectory}${fileName}`;
+          
+          console.log('Copying to persistent location:', persistentUri);
+          await FileSystem.copyAsync({
+            from: tempUri,
+            to: persistentUri
+          });
+          
+          // Verify the file exists at the new location
+          const fileInfo = await FileSystem.getInfoAsync(persistentUri);
+          
+          if (!fileInfo.exists) {
+            console.error('Failed to copy file to persistent location');
+            return;
+          }
+          
+          console.log('File copied successfully, size:', fileInfo.size);
+          
+          // Construct URL with query parameters using the persistent URI
+          const encodedUri = encodeURIComponent(persistentUri);
           const url = `/modal?mode=selectFriends&mediaUri=${encodedUri}&mediaType=image` as const;
           console.log('Navigating to:', url);
           router.push(url as any);
         }
       } catch (e) {
-        console.warn('ViewShot error', e);
+        console.error('ViewShot error:', e);
       }
     } else {
       // video – send overlay metadata
@@ -101,7 +128,25 @@ export default function SnapEditorScreen() {
 
     try {
       if (mediaType === 'image') {
-        finalUri = await viewShotRef.current?.capture?.();
+        // Capture the view
+        const tempUri = await viewShotRef.current?.capture?.();
+        
+        if (tempUri) {
+          // Copy to persistent location for story
+          const fileName = `story_${Date.now()}.png`;
+          finalUri = `${FileSystem.documentDirectory}${fileName}`;
+          
+          await FileSystem.copyAsync({
+            from: tempUri,
+            to: finalUri
+          });
+          
+          // Verify the captured file exists
+          const fileInfo = await FileSystem.getInfoAsync(finalUri);
+          if (!fileInfo.exists) {
+            throw new Error('Failed to save story image');
+          }
+        }
       } else {
         finalUri = mediaUri as string;
       }
@@ -129,16 +174,29 @@ export default function SnapEditorScreen() {
         caption: overlays.find(o => o.type === 'caption')?.text,
       });
 
+      // Clean up temporary files if we created them
+      if (mediaType === 'image' && finalUri && FileSystem.documentDirectory && finalUri.includes(FileSystem.documentDirectory)) {
+        await FileSystem.deleteAsync(finalUri, { idempotent: true }).catch(() => {});
+      }
+
       router.back();
     } catch (e) {
-      console.warn('Story upload failed', e);
+      console.error('Story upload failed:', e);
     }
   };
 
   return (
     <GestureHandlerRootView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ViewShot ref={viewShotRef} style={{ flex: 1 }} options={{ result: 'tmpfile' }}>
+      <ViewShot 
+        ref={viewShotRef} 
+        style={{ flex: 1 }} 
+        options={{ 
+          format: 'png', 
+          quality: 0.9,
+          result: 'tmpfile'
+        }}
+      >
         {mediaType === 'image' ? (
           <Image 
             source={{ uri: mediaUri }} 
