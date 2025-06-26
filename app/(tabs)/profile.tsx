@@ -358,6 +358,63 @@ export default function ProfileScreen() {
       setFavoriteProjects((prev) => prev.filter((p) => p !== proj)), 'project');
   };
   
+  // --- Supabase Profile Helpers ---
+  const updateProfileField = React.useCallback(async (fields: Partial<{ about: string; favorite_woods: string[]; favorite_tools: string[]; favorite_projects: string[] }>) => {
+    if (!userId) return;
+    const { error } = await supabase.from('profiles').update(fields).eq('id', userId);
+    if (error) {
+      console.error('[Profile] Failed to update profile field(s):', error);
+    }
+  }, [userId]);
+
+  // Fetch profile preferences on mount / when user changes
+  React.useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('about, favorite_woods, favorite_tools, favorite_projects')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('[Profile] Failed to fetch profile:', error);
+        return;
+      }
+
+      if (data) {
+        setAbout(data.about ?? '');
+        setFavoriteWoods(data.favorite_woods ?? []);
+        setFavoriteTools(data.favorite_tools ?? []);
+        setFavoriteProjects(data.favorite_projects ?? []);
+      }
+    })();
+  }, [userId]);
+
+  // Persist favorites when they change
+  React.useEffect(() => {
+    if (!userId) return;
+    updateProfileField({ favorite_woods: favoriteWoods });
+  }, [favoriteWoods, updateProfileField, userId]);
+
+  React.useEffect(() => {
+    if (!userId) return;
+    updateProfileField({ favorite_tools: favoriteTools });
+  }, [favoriteTools, updateProfileField, userId]);
+
+  React.useEffect(() => {
+    if (!userId) return;
+    updateProfileField({ favorite_projects: favoriteProjects });
+  }, [favoriteProjects, updateProfileField, userId]);
+
+  const handleToggleEditAbout = async () => {
+    // If we are finishing editing, persist the change
+    if (isEditingAbout) {
+      await updateProfileField({ about });
+    }
+    setIsEditingAbout((prev) => !prev);
+  };
+  
   if (!isAuthenticated) {
     return (
       <View style={styles.authContainer}>
@@ -440,7 +497,7 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>About</Text>
-          <TouchableOpacity onPress={() => setIsEditingAbout((prev) => !prev)}>
+          <TouchableOpacity onPress={handleToggleEditAbout}>
             {isEditingAbout ? (
               <X size={16} color={colors.text} />
             ) : (
