@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { colors } from "@/constants/colors";
 import * as NavigationBar from "expo-navigation-bar";
 import { Platform } from "react-native";
+import { ensureMediaBuckets } from "@/utils/supabase";
 
 export const unstable_settings = {
   initialRouteName: "(tabs)",
@@ -38,6 +39,9 @@ export default function RootLayout() {
       NavigationBar.setBackgroundColorAsync('#D3D3D3'); // Light gray
       NavigationBar.setButtonStyleAsync('dark');
     }
+    
+    // Ensure storage buckets exist
+    ensureMediaBuckets().catch(console.error);
   }, []);
 
   if (!loaded) {

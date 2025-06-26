@@ -2,18 +2,26 @@ import { createClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Ensure you have these two variables defined in your .env or app.config.ts
+// Ensure you have these two variables defined in your .env or app.config.js
+import Constants from 'expo-constants';
+
 let supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
 let supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string;
 
+// Fall back to Constants.expoConfig.extra if env vars are not set
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('[Supabase] URL or Anon Key is missing. Did you set your env vars?');
-  
-  // Hardcode values for web platform as a temporary workaround
-  if (typeof window !== 'undefined') {
-    console.warn('[Supabase] Using hardcoded values for web platform');
+  const extra = Constants.expoConfig?.extra;
+  if (extra?.supabaseUrl && extra?.supabaseAnonKey) {
+    supabaseUrl = extra.supabaseUrl;
+    supabaseAnonKey = extra.supabaseAnonKey;
+    console.log('[Supabase] Using values from app.config.js');
+  } else {
+    console.warn('[Supabase] URL or Anon Key is missing. Did you set your env vars?');
+    
+    // Hardcode values as last resort
     supabaseUrl = 'https://dqytpwkrdjibqunucigc.supabase.co';
     supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxeXRwd2tyZGppYnF1bnVjaWdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3NDQ0MjMsImV4cCI6MjA2NjMyMDQyM30.YwIpswXekP1Vi8T753RAEzx7jmtYeOSeeKMCyj_cijU';
+    console.warn('[Supabase] Using hardcoded values as fallback');
   }
 }
 
@@ -43,44 +51,25 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Helper function to ensure storage bucket exists
 export async function ensureMediaBuckets() {
   try {
+    // Since buckets are created manually in Supabase dashboard,
+    // we'll just verify they exist by trying to get their details
     const requiredBuckets = ['snaps', 'stories'];
-    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-
-    if (listError) {
-      console.error('Error listing buckets:', listError);
-      return false;
-    }
-
-    const existingBucketNames = buckets?.map((b) => b.name) ?? [];
-
+    
     for (const bucketName of requiredBuckets) {
-      if (!existingBucketNames.includes(bucketName)) {
-        console.log(`[Supabase] Creating ${bucketName} bucket…`);
-        const { error: createError } = await supabase.storage.createBucket(bucketName, {
-          public: true,
-          // 50 MB per file limit – videos can be bigger than images
-          fileSizeLimit: bucketName === 'snaps' ? 104857600 /* 100 MB */ : 52428800 /* 50 MB */,
-          allowedMimeTypes: [
-            'image/jpeg',
-            'image/png',
-            'image/webp',
-            'video/mp4',
-            'video/quicktime',
-          ],
-        });
-
-        if (createError && !createError.message.includes('already exists')) {
-          console.error(`[Supabase] Error creating ${bucketName} bucket`, createError);
-          return false;
-        }
-
-        console.log(`[Supabase] ${bucketName} bucket is ready`);
+      const { data, error } = await supabase.storage.getBucket(bucketName);
+      
+      if (error) {
+        console.warn(`[Supabase] ${bucketName} bucket not accessible:`, error.message);
+        console.log(`[Supabase] Please create the ${bucketName} bucket manually in the Supabase dashboard`);
+        console.log(`[Supabase] Make it public and add appropriate RLS policies`);
+      } else {
+        console.log(`[Supabase] ✓ ${bucketName} bucket is ready`);
       }
     }
 
     return true;
   } catch (error) {
-    console.error('Error in ensureMediaBuckets:', error);
+    console.error('Error checking buckets:', error);
     return false;
   }
 }
