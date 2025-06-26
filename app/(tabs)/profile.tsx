@@ -1,11 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, TextInput, Modal } from 'react-native';
 import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { useRouter } from 'expo-router';
-import { Settings, QrCode, UserPlus, LogOut, Camera } from 'lucide-react-native';
+import { Settings, QrCode, UserPlus, LogOut, Camera, Plus, Pencil, X } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
@@ -15,6 +15,55 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { isAuthenticated, username, displayName, avatar, logout, updateAvatar, userId } = useAuthStore();
   const [isUploading, setIsUploading] = React.useState(false);
+  
+  // Editable profile fields
+  const [about, setAbout] = React.useState<string>('Woodworking enthusiast specializing in hand-cut joinery and traditional techniques.');
+  const [isEditingAbout, setIsEditingAbout] = React.useState<boolean>(false);
+
+  const [favoriteWoods, setFavoriteWoods] = React.useState<string[]>(['Walnut', 'Cherry', 'Maple']);
+  const [favoriteTools, setFavoriteTools] = React.useState<string[]>(['Chisels', 'Hand Planes', 'Japanese Saws']);
+
+  const woodOptions = React.useMemo(
+    () => [
+      'Walnut',
+      'Cherry',
+      'Maple',
+      'Oak',
+      'Ash',
+      'Mahogany',
+      'Pine',
+      'Cedar',
+      'Birch',
+      'Teak',
+      'Rosewood',
+      'Elm',
+      'Beech',
+      'Poplar',
+      'Hickory',
+    ],
+    []
+  );
+
+  const toolOptions = React.useMemo(
+    () => [
+      'Chisels',
+      'Hand Planes',
+      'Japanese Saws',
+      'Router',
+      'Table Saw',
+      'Band Saw',
+      'Drill Press',
+      'Lathe',
+      'Hammer',
+      'Clamps',
+      'Screwdrivers',
+      'Sanders',
+    ],
+    []
+  );
+
+  const [isWoodPickerVisible, setIsWoodPickerVisible] = React.useState<boolean>(false);
+  const [isToolPickerVisible, setIsToolPickerVisible] = React.useState<boolean>(false);
   
   const handleLogin = () => {
     router.push('/auth/login');
@@ -284,42 +333,137 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
       
+      {/* About Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>About</Text>
-        <Text style={styles.sectionText}>
-          Woodworking enthusiast specializing in hand-cut joinery and traditional techniques.
-        </Text>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>About</Text>
+          <TouchableOpacity onPress={() => setIsEditingAbout((prev) => !prev)}>
+            {isEditingAbout ? (
+              <X size={16} color={colors.text} />
+            ) : (
+              <Pencil size={16} color={colors.text} />
+            )}
+          </TouchableOpacity>
+        </View>
+        {isEditingAbout ? (
+          <TextInput
+            style={styles.aboutInput}
+            multiline
+            value={about}
+            onChangeText={setAbout}
+            placeholder="Tell us about yourself"
+            placeholderTextColor={colors.textLight}
+          />
+        ) : (
+          <Text style={styles.sectionText}>{about}</Text>
+        )}
       </View>
       
+      {/* Favorite Woods Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Favorite Woods</Text>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Favorite Woods</Text>
+        </View>
         <View style={styles.tagsContainer}>
-          <View style={styles.tag}>
-            <Text style={styles.tagText}>Walnut</Text>
-          </View>
-          <View style={styles.tag}>
-            <Text style={styles.tagText}>Cherry</Text>
-          </View>
-          <View style={styles.tag}>
-            <Text style={styles.tagText}>Maple</Text>
-          </View>
+          {favoriteWoods.map((wood) => (
+            <View key={wood} style={styles.tag}>
+              <Text style={styles.tagText}>{wood}</Text>
+            </View>
+          ))}
+          <TouchableOpacity
+            onPress={() => setIsWoodPickerVisible(true)}
+            style={styles.addTagCircle}
+          >
+            <Plus size={16} color={colors.primary} />
+          </TouchableOpacity>
         </View>
       </View>
       
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Favorite Tools</Text>
-        <View style={styles.tagsContainer}>
-          <View style={styles.tag}>
-            <Text style={styles.tagText}>Chisels</Text>
-          </View>
-          <View style={styles.tag}>
-            <Text style={styles.tagText}>Hand Planes</Text>
-          </View>
-          <View style={styles.tag}>
-            <Text style={styles.tagText}>Japanese Saws</Text>
+      {/* Wood Picker Modal */}
+      <Modal
+        animationType="slide"
+        transparent
+        visible={isWoodPickerVisible}
+        onRequestClose={() => setIsWoodPickerVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Wood Species</Text>
+              <TouchableOpacity onPress={() => setIsWoodPickerVisible(false)}>
+                <X size={20} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 300 }}>
+              {woodOptions.map((wood) => (
+                <TouchableOpacity
+                  key={wood}
+                  style={styles.modalOption}
+                  onPress={() => {
+                    setFavoriteWoods((prev) => (prev.includes(wood) ? prev : [...prev, wood]));
+                    setIsWoodPickerVisible(false);
+                  }}
+                >
+                  <Text style={styles.modalOptionText}>{wood}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         </View>
+      </Modal>
+      
+      {/* Favorite Tools Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Favorite Tools</Text>
+        </View>
+        <View style={styles.tagsContainer}>
+          {favoriteTools.map((tool) => (
+            <View key={tool} style={styles.tag}>
+              <Text style={styles.tagText}>{tool}</Text>
+            </View>
+          ))}
+          <TouchableOpacity
+            onPress={() => setIsToolPickerVisible(true)}
+            style={styles.addTagCircle}
+          >
+            <Plus size={16} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
+      
+      {/* Tool Picker Modal */}
+      <Modal
+        animationType="slide"
+        transparent
+        visible={isToolPickerVisible}
+        onRequestClose={() => setIsToolPickerVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Tool</Text>
+              <TouchableOpacity onPress={() => setIsToolPickerVisible(false)}>
+                <X size={20} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 300 }}>
+              {toolOptions.map((tool) => (
+                <TouchableOpacity
+                  key={tool}
+                  style={styles.modalOption}
+                  onPress={() => {
+                    setFavoriteTools((prev) => (prev.includes(tool) ? prev : [...prev, tool]));
+                    setIsToolPickerVisible(false);
+                  }}
+                >
+                  <Text style={styles.modalOptionText}>{tool}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
       
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <LogOut size={20} color={colors.danger} />
@@ -429,6 +573,17 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     marginTop: 4,
   },
+  addTagCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    marginBottom: 8,
+  },
   tag: {
     backgroundColor: colors.background,
     paddingHorizontal: 12,
@@ -439,6 +594,50 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 12,
+    color: colors.text,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  aboutInput: {
+    minHeight: 80,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: 8,
+    color: colors.text,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  modalOption: {
+    paddingVertical: 12,
+  },
+  modalOptionText: {
+    fontSize: 14,
     color: colors.text,
   },
   logoutButton: {
