@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Image, StyleSheet } from 'react-native';
+import { View, Image, StyleSheet, useWindowDimensions } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import ViewShot from 'react-native-view-shot';
@@ -20,6 +20,7 @@ export default function SnapEditorScreen() {
   }>();
   const router = useRouter();
   const { userId } = useAuthStore();
+  const { width, height } = useWindowDimensions();
 
   const [overlays, setOverlays] = React.useState<OverlayData[]>([]);
   const viewShotRef = React.useRef<ViewShot>(null);
@@ -43,8 +44,8 @@ export default function SnapEditorScreen() {
       id: nanoid(),
       type: 'caption',
       text: 'Caption',
-      x: 0,
-      y: 0,
+      x: width / 2 - 50, // Center horizontally (approximate text width)
+      y: height / 2 - 20, // Center vertically (approximate text height)
       scale: 1,
     };
     setOverlays(prev => [...prev, newOverlay]);
@@ -55,8 +56,8 @@ export default function SnapEditorScreen() {
       id: nanoid(),
       type: 'sticker',
       source: require('@/assets/images/icon.png'),
-      x: 0,
-      y: 0,
+      x: width / 2 - 50, // Center horizontally (sticker is 100px wide)
+      y: height / 2 - 50, // Center vertically (sticker is 100px tall)
       scale: 1,
     };
     setOverlays(prev => [...prev, newOverlay]);
@@ -176,11 +177,11 @@ export default function SnapEditorScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.toolButton, styles.storyButton]} onPress={handlePostStory}>
-          <Text style={{ color: '#fff' }}>Story</Text>
+          <Text style={{ color: '#fff', fontWeight: '600' }}>For Stories</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.toolButton, styles.continueButton]} onPress={handleContinue}>
-          <Upload size={20} color="#fff" />
+          <Text style={{ color: '#fff', fontWeight: '600' }}>Send To</Text>
         </TouchableOpacity>
       </View>
     </GestureHandlerRootView>
