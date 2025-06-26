@@ -175,35 +175,35 @@ export default function ChatScreen() {
           )}
         />
         
-        <View style={[styles.inputContainer, { paddingBottom: insets.bottom }]}>
-          <TouchableOpacity style={styles.cameraButton} onPress={handleCamera}>
-            <Camera size={24} color={colors.primary} />
-          </TouchableOpacity>
-          
-          <TextInput
-            style={styles.input}
-            placeholder="Message"
-            value={text}
-            onChangeText={onChangeText}
-            multiline
-          />
-          
-          <TouchableOpacity 
-            style={[styles.sendButton, !text.trim() && styles.disabledSendButton]} 
-            onPress={handleSend}
-            disabled={!text.trim()}
-          >
-            <Send size={20} color={text.trim() ? colors.card : colors.inactive} />
-          </TouchableOpacity>
-        </View>
-
         {typingIndicators[id] && (
-          <View style={{ paddingHorizontal: 16, paddingBottom: 4 }}>
+          <View style={{ paddingHorizontal: 16, paddingVertical: 4 }}>
             <Text style={{ color: colors.textLight, fontStyle: 'italic' }}>
               {friend?.displayName || 'Friend'} is typing...
             </Text>
           </View>
         )}
+
+        <View style={[styles.inputContainer, { paddingBottom: insets.bottom }]}> 
+          <TouchableOpacity style={styles.cameraButton} onPress={handleCamera}> 
+            <Camera size={24} color={colors.primary} /> 
+          </TouchableOpacity> 
+          
+          <TextInput 
+            style={styles.input} 
+            placeholder="Message" 
+            value={text} 
+            onChangeText={onChangeText} 
+            multiline 
+          /> 
+          
+          <TouchableOpacity  
+            style={[styles.sendButton, !text.trim() && styles.disabledSendButton]}  
+            onPress={handleSend} 
+            disabled={!text.trim()} 
+          > 
+            <Send size={20} color={text.trim() ? colors.card : colors.inactive} /> 
+          </TouchableOpacity> 
+        </View>
       </KeyboardAvoidingView>
     </>
   );
