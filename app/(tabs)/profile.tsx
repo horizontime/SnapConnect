@@ -10,7 +10,6 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '@/utils/supabase';
-import { debugStorageSetup } from '@/utils/debug';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -320,34 +319,6 @@ export default function ProfileScreen() {
         <LogOut size={20} color={colors.danger} />
         <Text style={styles.logoutText}>Log Out</Text>
       </TouchableOpacity>
-      
-      {/* Debug button - only show in development */}
-      {__DEV__ && (
-        <>
-          <TouchableOpacity 
-            style={[styles.logoutButton, { marginTop: 8 }]} 
-            onPress={() => {
-              debugStorageSetup();
-              if (Platform.OS === 'web') {
-                console.log('Check console for storage debug info');
-              } else {
-                Alert.alert('Debug', 'Check console for storage debug info');
-              }
-            }}
-          >
-            <Settings size={20} color={colors.textLight} />
-            <Text style={[styles.logoutText, { color: colors.textLight }]}>Debug Storage</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.logoutButton, { marginTop: 8 }]} 
-            onPress={handleImagePicker}
-          >
-            <Camera size={20} color={colors.textLight} />
-            <Text style={[styles.logoutText, { color: colors.textLight }]}>Test Image Picker</Text>
-          </TouchableOpacity>
-        </>
-      )}
     </ScrollView>
   );
 }
