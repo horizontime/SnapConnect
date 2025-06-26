@@ -50,7 +50,16 @@ export default function LoginScreen() {
         router.replace('/(tabs)');
       } else {
         // If profile row missing, create a minimal one
-        await supabase.from('profiles').insert({ id: data.user.id, username: username.trim() });
+        await supabase.from('profiles').insert({
+          id: data.user.id,
+          username: username.trim(),
+          display_name: username.trim(),
+          avatar_url: '',
+          about: '',
+          favorite_woods: [],
+          favorite_tools: [],
+          favorite_projects: [],
+        });
         login(data.user.id, username.trim(), username.trim(), '');
         router.replace('/(tabs)');
       }

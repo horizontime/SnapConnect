@@ -17,13 +17,16 @@ export default function ProfileScreen() {
   const [isUploading, setIsUploading] = React.useState(false);
   
   // Editable profile fields
-  const [about, setAbout] = React.useState<string>('Woodworking enthusiast specializing in hand-cut joinery and traditional techniques.');
+  const [about, setAbout] = React.useState<string>('');
   const [aboutOriginal, setAboutOriginal] = React.useState<string>('');
   const [isEditingAbout, setIsEditingAbout] = React.useState<boolean>(false);
 
-  const [favoriteWoods, setFavoriteWoods] = React.useState<string[]>(['Walnut', 'Cherry', 'Maple']);
-  const [favoriteTools, setFavoriteTools] = React.useState<string[]>(['Chisels', 'Hand Planes', 'Japanese Saws']);
-  const [favoriteProjects, setFavoriteProjects] = React.useState<string[]>(['Tables', 'Chairs']);
+  const [favoriteWoods, setFavoriteWoods] = React.useState<string[]>([]);
+  const [favoriteTools, setFavoriteTools] = React.useState<string[]>([]);
+  const [favoriteProjects, setFavoriteProjects] = React.useState<string[]>([]);
+
+  // Indicates we have fetched profile from Supabase and can now persist changes safely
+  const [profileLoaded, setProfileLoaded] = React.useState<boolean>(false);
 
   const woodOptions = React.useMemo(() => {
     const woods = [
@@ -390,24 +393,26 @@ export default function ProfileScreen() {
         setFavoriteTools(data.favorite_tools ?? []);
         setFavoriteProjects(data.favorite_projects ?? []);
       }
+
+      setProfileLoaded(true);
     })();
   }, [userId]);
 
   // Persist favorites when they change
   React.useEffect(() => {
-    if (!userId) return;
+    if (!userId || !profileLoaded) return;
     updateProfileField({ favorite_woods: favoriteWoods });
-  }, [favoriteWoods, updateProfileField, userId]);
+  }, [favoriteWoods, updateProfileField, userId, profileLoaded]);
 
   React.useEffect(() => {
-    if (!userId) return;
+    if (!userId || !profileLoaded) return;
     updateProfileField({ favorite_tools: favoriteTools });
-  }, [favoriteTools, updateProfileField, userId]);
+  }, [favoriteTools, updateProfileField, userId, profileLoaded]);
 
   React.useEffect(() => {
-    if (!userId) return;
+    if (!userId || !profileLoaded) return;
     updateProfileField({ favorite_projects: favoriteProjects });
-  }, [favoriteProjects, updateProfileField, userId]);
+  }, [favoriteProjects, updateProfileField, userId, profileLoaded]);
 
   const handleStartEditAbout = () => {
     // Backup current about value so we can restore on cancel

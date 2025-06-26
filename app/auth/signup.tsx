@@ -46,6 +46,10 @@ export default function SignupScreen() {
         username: username.trim(),
         display_name: displayName.trim(),
         avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80',
+        about: '',
+        favorite_woods: [],
+        favorite_tools: [],
+        favorite_projects: [],
       });
 
       login(data.user!.id, username.trim(), displayName.trim(), 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80');
