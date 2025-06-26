@@ -11,6 +11,7 @@ import { FriendListItem } from '@/components/friend/FriendListItem';
 import { supabase } from '@/utils/supabase';
 import SnapListItem from '@/components/snap/SnapListItem';
 import { diagnoseSnapIssues } from '@/utils/debug';
+import { FriendProfileModal } from '@/components/friend/FriendProfileModal';
 
 type StoryListItem = {
   id: string;
@@ -30,6 +31,10 @@ export default function ChatsScreen() {
   const { snaps, fetchSnaps, subscribeToSnaps } = useSnapStore();
   const [view, setView] = useState<'snaps' | 'chats' | 'friends'>("chats");
   const [refreshing, setRefreshing] = useState(false);
+  
+  // State for friend profile modal
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<any>(null);
   
   const chatsWithUserData = getChatsWithUserData();
   
@@ -85,6 +90,53 @@ export default function ChatsScreen() {
     }
 
     router.push(`/chat/${chatId}?userId=${friendId}` as any);
+  };
+
+  const openFriendProfile = async (friend: any) => {
+    try {
+      setSelectedProfile(null);
+      setProfileModalVisible(true);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url, about, favorite_woods, favorite_tools, favorite_projects')
+        .eq('id', friend.id)
+        .single();
+
+      if (error) throw error;
+
+      const profile = {
+        id: data.id,
+        username: data.username,
+        displayName: data.display_name || data.username,
+        avatar: data.avatar_url,
+        about: data.about,
+        favoriteWoods: data.favorite_woods || [],
+        favoriteTools: data.favorite_tools || [],
+        favoriteProjects: data.favorite_projects || [],
+        isOnline: friend.isOnline,
+      };
+
+      setSelectedProfile(profile);
+    } catch (err: any) {
+      console.error('[openFriendProfile]', err.message);
+      setProfileModalVisible(false);
+    }
+  };
+
+  const closeProfileModal = () => {
+    setProfileModalVisible(false);
+    setSelectedProfile(null);
+  };
+
+  const handleSendTextFromProfile = () => {
+    if (!selectedProfile) return;
+    closeProfileModal();
+    handleFriendPress(selectedProfile.id);
+  };
+
+  const handleSendSnapFromProfile = () => {
+    closeProfileModal();
+    navigateToCamera();
   };
 
   // Load chats once on mount
@@ -259,7 +311,7 @@ export default function ChatsScreen() {
               displayName={item.displayName}
               avatar={item.avatar}
               isOnline={item.isOnline}
-              onPress={() => handleFriendPress(item.id)}
+              onPress={() => openFriendProfile(item)}
             />
           )}
           ListEmptyComponent={() => (
@@ -270,6 +322,14 @@ export default function ChatsScreen() {
           )}
         />
       )}
+
+      <FriendProfileModal
+        visible={profileModalVisible}
+        profile={selectedProfile}
+        onClose={closeProfileModal}
+        onSendText={handleSendTextFromProfile}
+        onSendSnap={handleSendSnapFromProfile}
+      />
     </View>
   );
 }
