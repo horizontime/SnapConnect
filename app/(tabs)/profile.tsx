@@ -442,6 +442,10 @@ const styles = StyleSheet.create({
     padding: 16,
     marginTop: 24,
     marginBottom: 40,
+    marginHorizontal: 16,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: 8,
   },
   logoutText: {
     fontSize: 16,
