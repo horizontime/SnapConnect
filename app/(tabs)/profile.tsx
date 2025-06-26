@@ -252,7 +252,13 @@ export default function ProfileScreen() {
           </View>
         </TouchableOpacity>
         <Text style={styles.displayName}>{displayName || 'User'}</Text>
-        <Text style={styles.username}>@{username || 'username'}</Text>
+        <Text style={styles.username}>
+          {username
+            ? username.includes('@')
+              ? username // If it looks like an email, don't prepend another @
+              : `@${username}`
+            : '@username'}
+        </Text>
       </View>
       
       <View style={styles.actionsContainer}>
