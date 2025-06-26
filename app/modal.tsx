@@ -155,7 +155,7 @@ function SelectFriendsScreen() {
           <Avatar source={item.avatar} size={48} />
           <View style={styles.friendDetails}>
             <Text style={styles.friendName}>{item.displayName}</Text>
-            <Text style={styles.friendUsername}>@{item.username}</Text>
+            <Text style={styles.friendUsername}>{item.username}</Text>
           </View>
         </View>
         <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
