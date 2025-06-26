@@ -73,6 +73,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
         .select('*')
         .in('id', otherIds);
 
+      // Fetch unread counts for all chats
+      const chatIds = data.map((row: any) => row.id);
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('chat_id')
+        .in('chat_id', chatIds)
+        .neq('sender_id', userId)  // Only count received messages
+        .eq('is_read', false);     // Only count unread messages
+
+      // Group by chat_id and count
+      const unreadCounts: Record<string, number> = {};
+      if (messages) {
+        messages.forEach((row: any) => {
+          unreadCounts[row.chat_id] = (unreadCounts[row.chat_id] || 0) + 1;
+        });
+      }
+
       const chats = data.map((row: any): Chat & { user: User } => {
         const friendId = row.user1_id === userId ? row.user2_id : row.user1_id;
 
@@ -96,6 +113,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
               isOnline: false,
             };
 
+        // Use calculated unread count of received messages
+        const actualUnreadCount = unreadCounts?.[row.id] || 0;
+
         return {
           id: row.id.toString(),
           userId: friendId.toString(),
@@ -105,7 +125,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             timestamp: row.last_message_timestamp,
             isRead: row.last_message_is_read,
           },
-          unreadCount: row.unread_count,
+          unreadCount: actualUnreadCount,
           user: mappedUser,
         };
       });
