@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Platform, Alert } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
@@ -8,6 +8,8 @@ import { FilterSelector } from '@/components/camera/FilterSelector';
 import { colors } from '@/constants/colors';
 import { mockFilters } from '@/constants/mockData';
 import { X } from 'lucide-react-native';
+import { useIsFocused } from '@react-navigation/native';
+import * as FileSystem from 'expo-file-system';
 
 export default function CameraScreen() {
   const router = useRouter();
@@ -21,6 +23,16 @@ export default function CameraScreen() {
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [recordingProgress, setRecordingProgress] = useState(0);
   const progressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  
+  // Track focus state to control camera rendering
+  const isFocused = useIsFocused();
+
+  // Clear camera ref when screen loses focus to avoid using stale reference
+  useEffect(() => {
+    if (!isFocused) {
+      cameraRef.current = null;
+    }
+  }, [isFocused]);
   
   if (!cameraPermission || !microphonePermission) {
     // Permissions are still loading
@@ -58,21 +70,50 @@ export default function CameraScreen() {
     if (!cameraRef.current) return;
     
     try {
+      console.log('Starting photo capture...');
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.9,
         base64: false,
         exif: false,
       });
       
+      console.log('Photo captured:', photo);
+      
       if (photo) {
-        // Navigate to Snap Editor with the photo
-        router.push({
-          pathname: '/camera/editor' as any,
-          params: {
-            mediaUri: photo.uri,
-            mediaType: 'image',
-          },
-        });
+        // Small delay to ensure camera is released
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Copy to a permanent location to avoid file being deleted
+        const fileName = `snap_${Date.now()}.jpg`;
+        const permanentUri = `${FileSystem.documentDirectory}${fileName}`;
+        
+        try {
+          await FileSystem.copyAsync({
+            from: photo.uri,
+            to: permanentUri
+          });
+          console.log('Photo copied to:', permanentUri);
+          
+          // Navigate to Snap Editor with the permanent photo URI
+          router.push({
+            pathname: '/camera/editor' as any,
+            params: {
+              mediaUri: permanentUri,
+              mediaType: 'image',
+            },
+          });
+          console.log('Navigating to editor with URI:', permanentUri);
+        } catch (copyError) {
+          console.error('Failed to copy photo:', copyError);
+          // Fallback to original URI
+          router.push({
+            pathname: '/camera/editor' as any,
+            params: {
+              mediaUri: photo.uri,
+              mediaType: 'image',
+            },
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to take picture:', error);
@@ -150,11 +191,13 @@ export default function CameraScreen() {
     <View style={styles.container}>
       <StatusBar style="light" />
       
-      <CameraView
-        ref={cameraRef}
-        style={StyleSheet.absoluteFill}
-        facing={facing}
-      />
+      {isFocused && (
+        <CameraView
+          ref={cameraRef}
+          style={StyleSheet.absoluteFill}
+          facing={facing}
+        />
+      )}
 
       {isRecording && (
         <View style={styles.recordingIndicator}>

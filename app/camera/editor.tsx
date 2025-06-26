@@ -27,7 +27,14 @@ export default function SnapEditorScreen() {
   // Safe area for bottom navigation / gesture bar
   const insets = useSafeAreaInsets();
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log('Editor received mediaUri:', mediaUri);
+    console.log('Editor received mediaType:', mediaType);
+  }, [mediaUri, mediaType]);
+
   if (!mediaUri) {
+    console.log('No mediaUri provided to editor');
     return null;
   }
 
@@ -137,7 +144,13 @@ export default function SnapEditorScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <ViewShot ref={viewShotRef} style={{ flex: 1 }} options={{ result: 'tmpfile' }}>
         {mediaType === 'image' ? (
-          <Image source={{ uri: mediaUri }} style={styles.media} resizeMode="contain" />
+          <Image 
+            source={{ uri: mediaUri }} 
+            style={styles.media} 
+            resizeMode="contain"
+            onError={(e) => console.error('Image load error:', e.nativeEvent.error)}
+            onLoad={() => console.log('Image loaded successfully')}
+          />
         ) : (
           <VideoPlayer uri={mediaUri} />
         )}
@@ -181,6 +194,8 @@ const styles = StyleSheet.create({
   },
   media: {
     flex: 1,
+    width: '100%',
+    height: '100%',
   },
   toolbar: {
     position: 'absolute',
