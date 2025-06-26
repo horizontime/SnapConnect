@@ -22,6 +22,7 @@ export default function ProfileScreen() {
 
   const [favoriteWoods, setFavoriteWoods] = React.useState<string[]>(['Walnut', 'Cherry', 'Maple']);
   const [favoriteTools, setFavoriteTools] = React.useState<string[]>(['Chisels', 'Hand Planes', 'Japanese Saws']);
+  const [favoriteProjects, setFavoriteProjects] = React.useState<string[]>(['Tables', 'Chairs']);
 
   const woodOptions = React.useMemo(() => {
     const woods = [
@@ -83,8 +84,59 @@ export default function ProfileScreen() {
     return tools.sort((a, b) => a.localeCompare(b));
   }, []);
 
+  const projectOptions = React.useMemo(() => {
+    const projects = [
+      'Arbors',
+      'Beds',
+      'Benches',
+      'Birdhouses',
+      'Blanket Chests',
+      'Bookcases',
+      'Boxes',
+      'Cabinets',
+      'Chairs',
+      'Coasters',
+      'Coffee Tables',
+      'Cutting Boards',
+      'Desks',
+      'Dog Houses',
+      'Dressers',
+      'End Tables',
+      'Entryway Tables',
+      'Floating Shelves',
+      'Jewelry Boxes',
+      'Kitchen Islands',
+      'Knife Blocks',
+      'Mantels',
+      'Nightstands',
+      'Outdoor Furniture',
+      'Pergolas',
+      'Picnic Tables',
+      'Planters',
+      'Picture Frames',
+      'Rocking Chairs',
+      'Serving Trays',
+      'Shelves',
+      'Shoe Racks',
+      'Step Stools',
+      'Stools',
+      'Subwoofer Enclosures',
+      'Tables',
+      'Tool Chests',
+      'Toy Chests',
+      'Toys',
+      'Wall Art',
+      'Wardrobes',
+      'Wine Cabinets',
+      'Wine Racks',
+      'Workbenches',
+    ];
+    return projects.sort((a, b) => a.localeCompare(b));
+  }, []);
+
   const [isWoodPickerVisible, setIsWoodPickerVisible] = React.useState<boolean>(false);
   const [isToolPickerVisible, setIsToolPickerVisible] = React.useState<boolean>(false);
+  const [isProjectPickerVisible, setIsProjectPickerVisible] = React.useState<boolean>(false);
   
   const handleLogin = () => {
     router.push('/auth/login');
@@ -279,7 +331,7 @@ export default function ProfileScreen() {
   const confirmRemove = (
     item: string,
     removeCb: () => void,
-    type: 'wood' | 'tool'
+    type: 'wood' | 'tool' | 'project'
   ) => {
     Alert.alert(
       `Remove ${item}?`,
@@ -299,6 +351,11 @@ export default function ProfileScreen() {
   const handleRemoveTool = (tool: string) => {
     confirmRemove(tool, () =>
       setFavoriteTools((prev) => prev.filter((t) => t !== tool)), 'tool');
+  };
+
+  const handleRemoveProject = (proj: string) => {
+    confirmRemove(proj, () =>
+      setFavoriteProjects((prev) => prev.filter((p) => p !== proj)), 'project');
   };
   
   if (!isAuthenticated) {
@@ -519,6 +576,63 @@ export default function ProfileScreen() {
         </View>
       </Modal>
       
+      {/* Favorite Projects Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Favorite Project Types</Text>
+        </View>
+        <View style={styles.tagsContainer}>
+          {favoriteProjects.map((proj) => (
+            <TouchableOpacity
+              key={proj}
+              style={styles.tag}
+              onPress={() => handleRemoveProject(proj)}
+            >
+              <Text style={styles.tagText}>{proj}</Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity
+            onPress={() => setIsProjectPickerVisible(true)}
+            style={styles.addTagCircle}
+          >
+            <Plus size={16} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+      </View>
+      
+      {/* Project Picker Modal */}
+      <Modal
+        animationType="slide"
+        transparent
+        visible={isProjectPickerVisible}
+        onRequestClose={() => setIsProjectPickerVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Project Type</Text>
+              <TouchableOpacity onPress={() => setIsProjectPickerVisible(false)}>
+                <X size={20} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 300 }}>
+              {projectOptions.map((proj) => (
+                <TouchableOpacity
+                  key={proj}
+                  style={styles.modalOption}
+                  onPress={() => {
+                    setFavoriteProjects((prev) => (prev.includes(proj) ? prev : [...prev, proj]));
+                    setIsProjectPickerVisible(false);
+                  }}
+                >
+                  <Text style={styles.modalOptionText}>{proj}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+      
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <LogOut size={20} color={colors.danger} />
         <Text style={styles.logoutText}>Log Out</Text>
@@ -699,9 +813,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
-    marginTop: 24,
+    marginTop: 40,
     marginBottom: 40,
-    marginHorizontal: 16,
+    alignSelf: 'center',
+    width: '70%',
     borderWidth: 1,
     borderColor: colors.danger,
     borderRadius: 8,
