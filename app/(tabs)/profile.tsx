@@ -5,7 +5,7 @@ import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { useRouter } from 'expo-router';
-import { Settings, QrCode, UserPlus, LogOut, Camera, Plus, Pencil, X } from 'lucide-react-native';
+import { Settings, QrCode, UserPlus, LogOut, Camera, Plus, Pencil, X, Save } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
@@ -18,6 +18,7 @@ export default function ProfileScreen() {
   
   // Editable profile fields
   const [about, setAbout] = React.useState<string>('Woodworking enthusiast specializing in hand-cut joinery and traditional techniques.');
+  const [aboutOriginal, setAboutOriginal] = React.useState<string>('');
   const [isEditingAbout, setIsEditingAbout] = React.useState<boolean>(false);
 
   const [favoriteWoods, setFavoriteWoods] = React.useState<string[]>(['Walnut', 'Cherry', 'Maple']);
@@ -384,6 +385,7 @@ export default function ProfileScreen() {
 
       if (data) {
         setAbout(data.about ?? '');
+        setAboutOriginal(data.about ?? '');
         setFavoriteWoods(data.favorite_woods ?? []);
         setFavoriteTools(data.favorite_tools ?? []);
         setFavoriteProjects(data.favorite_projects ?? []);
@@ -407,12 +409,21 @@ export default function ProfileScreen() {
     updateProfileField({ favorite_projects: favoriteProjects });
   }, [favoriteProjects, updateProfileField, userId]);
 
-  const handleToggleEditAbout = async () => {
-    // If we are finishing editing, persist the change
-    if (isEditingAbout) {
-      await updateProfileField({ about });
-    }
-    setIsEditingAbout((prev) => !prev);
+  const handleStartEditAbout = () => {
+    // Backup current about value so we can restore on cancel
+    setAboutOriginal(about);
+    setIsEditingAbout(true);
+  };
+
+  const handleSaveAbout = async () => {
+    await updateProfileField({ about });
+    setIsEditingAbout(false);
+  };
+
+  const handleCancelEditAbout = () => {
+    // Revert to original value without saving
+    setAbout(aboutOriginal);
+    setIsEditingAbout(false);
   };
   
   if (!isAuthenticated) {
@@ -497,13 +508,20 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>About</Text>
-          <TouchableOpacity onPress={handleToggleEditAbout}>
-            {isEditingAbout ? (
-              <X size={16} color={colors.text} />
-            ) : (
+          {isEditingAbout ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity onPress={handleSaveAbout} style={{ marginRight: 8 }}>
+                <Save size={16} color={colors.text} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleCancelEditAbout}>
+                <X size={16} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={handleStartEditAbout}>
               <Pencil size={16} color={colors.text} />
-            )}
-          </TouchableOpacity>
+            </TouchableOpacity>
+          )}
         </View>
         {isEditingAbout ? (
           <TextInput
@@ -513,6 +531,8 @@ export default function ProfileScreen() {
             onChangeText={setAbout}
             placeholder="Tell us about yourself"
             placeholderTextColor={colors.textLight}
+            textAlignVertical="top"
+            textAlign="left"
           />
         ) : (
           <Text style={styles.sectionText}>{about}</Text>
@@ -833,6 +853,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 8,
     color: colors.text,
+    textAlignVertical: 'top',
+    textAlign: 'left',
   },
   modalOverlay: {
     flex: 1,
