@@ -43,8 +43,8 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
           )}
           <Pressable
             style={[styles.captureButton, isRecording && styles.recordingButton]}
-            onPress={onCapture}
-            onLongPress={onStartRecording}
+            onPress={!isRecording ? onCapture : undefined}
+            onLongPress={!isRecording ? onStartRecording : undefined}
             onPressOut={isRecording ? onStopRecording : undefined}
             delayLongPress={200}
           >

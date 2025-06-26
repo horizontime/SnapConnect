@@ -23,6 +23,10 @@ export default function CameraScreen() {
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [recordingProgress, setRecordingProgress] = useState(0);
   const progressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Track when a recording actually started so we can enforce a small minimum
+  // duration before calling stopRecording. Stopping too early causes the native
+  // layer to throw "Recording was stopped before any data could be produced".
+  const recordingStartTime = useRef<number>(0);
   
   // Track focus state to control camera rendering
   const isFocused = useIsFocused();
@@ -30,6 +34,24 @@ export default function CameraScreen() {
   // Clear camera ref when screen loses focus to avoid using stale reference
   useEffect(() => {
     if (!isFocused) {
+      // Stop any ongoing recording
+      if (isRecording) {
+        // Directly stop recording without the delay logic since we're leaving the screen
+        try {
+          cameraRef.current?.stopRecording();
+        } catch (err) {
+          // Ignore errors when cleaning up
+        }
+        // Cancel any pending recording promise
+        recordingRef.current = null;
+        setIsRecording(false);
+        if (progressInterval.current) {
+          clearInterval(progressInterval.current);
+          progressInterval.current = null;
+        }
+        setRecordingProgress(0);
+      }
+      // Clear ref after cleanup
       cameraRef.current = null;
     }
   }, [isFocused]);
@@ -122,35 +144,54 @@ export default function CameraScreen() {
   };
   
   const handleStartRecording = async () => {
-    if (!cameraRef.current || isRecording) return;
+    if (!cameraRef.current || isRecording || recordingRef.current) return;
     
     try {
+      console.log('[Camera] Starting recording...');
       setIsRecording(true);
       setRecordingProgress(0);
-      const startTime = Date.now();
+      recordingStartTime.current = Date.now();
       progressInterval.current = setInterval(() => {
-        const elapsed = Date.now() - startTime;
+        const elapsed = Date.now() - recordingStartTime.current;
         setRecordingProgress(Math.min(elapsed / 15000, 1));
       }, 100);
-      recordingRef.current = await cameraRef.current.recordAsync({
+      
+      // Start recording without awaiting - the promise resolves when recording stops
+      recordingRef.current = cameraRef.current.recordAsync({
         maxDuration: 15, // 15 seconds max per spec
       });
       
-      const video = await recordingRef.current;
-      if (video) {
-        // Navigate to Snap Editor with the video
-        router.push({
-          pathname: '/camera/editor' as any,
-          params: {
-            mediaUri: video.uri,
-            mediaType: 'video',
-          },
-        });
-      }
+      // Handle the result when recording stops
+      recordingRef.current.then((video: any) => {
+        console.log('[Camera] Recording completed:', video);
+        if (video && video.uri) {
+          // Navigate to Snap Editor with the video
+          router.push({
+            pathname: '/camera/editor' as any,
+            params: {
+              mediaUri: video.uri,
+              mediaType: 'video',
+            },
+          });
+        }
+      }).catch((error: any) => {
+        // Only log if it's not a user cancellation
+        if (error.message && !error.message.includes('stopped before any data')) {
+          console.error('Recording error:', error);
+        }
+      }).finally(() => {
+        // Clean up state after recording completes or errors
+        setIsRecording(false);
+        recordingRef.current = null;
+        if (progressInterval.current) {
+          clearInterval(progressInterval.current);
+          progressInterval.current = null;
+        }
+        setRecordingProgress(0);
+      });
     } catch (error) {
       console.error('Failed to record video:', error);
       Alert.alert('Error', 'Failed to record video');
-    } finally {
       setIsRecording(false);
       recordingRef.current = null;
       if (progressInterval.current) {
@@ -162,12 +203,30 @@ export default function CameraScreen() {
   };
   
   const handleStopRecording = () => {
-    if (cameraRef.current && isRecording) {
-      cameraRef.current.stopRecording();
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current);
-        progressInterval.current = null;
+    if (!cameraRef.current || !isRecording || !recordingRef.current) return;
+    
+    console.log('[Camera] Stopping recording...');
+
+    // Ensure we record long enough to produce at least one key-frame.
+    const elapsed = Date.now() - recordingStartTime.current;
+    // Empirically Android needs ~1s before it can flush a key-frame; give it
+    // a little buffer so recordings never fail with "no data produced".
+    const MIN_DURATION = 1200; // ms
+
+    const stop = () => {
+      try {
+        cameraRef.current?.stopRecording();
+      } catch (err) {
+        console.warn('[Camera] Failed to stop recording:', err);
       }
+      // State cleanup is now handled in the promise's finally block
+    };
+
+    if (elapsed < MIN_DURATION) {
+      // Delay stop so we meet the minimum duration.
+      setTimeout(stop, MIN_DURATION - elapsed);
+    } else {
+      stop();
     }
   };
   
