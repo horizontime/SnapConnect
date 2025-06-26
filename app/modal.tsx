@@ -132,7 +132,7 @@ function SelectFriendsScreen() {
       Alert.alert(
         'Sent!',
         `Snap sent to ${selectedFriends.length} friend${selectedFriends.length > 1 ? 's' : ''}`,
-        [{ text: 'OK', onPress: () => router.back() }]
+        [{ text: 'OK', onPress: () => router.replace('/(tabs)/camera') }]
       );
     } catch (error) {
       console.error('Failed to send snap:', error);
