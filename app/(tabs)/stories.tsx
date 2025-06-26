@@ -10,7 +10,7 @@ import { StoryThumbnail } from '@/components/story/StoryThumbnail';
 
 export default function StoriesScreen() {
   const router = useRouter();
-  const { userId } = useAuthStore();
+  const { userId, avatar: userAvatar } = useAuthStore();
   const { getFriendsStories, fetchStories, getMyStories } = useStoryStore();
   
   // Only include stories that contain at least one item to avoid runtime errors
@@ -83,11 +83,13 @@ export default function StoriesScreen() {
             <StoryThumbnail
               id="my-story"
               username="Your Story"
-              avatar={userId ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80' : ''}
+              avatar={userAvatar ?? ''}
               hasStory={myStories.length > 0}
               isViewed={false}
               isCurrentUser={true}
-              onPress={() => { /* Add story functionality to be implemented */ }}
+              onPress={() => {
+                /* Add story functionality to be implemented */
+              }}
             />
           </View>
         )}
