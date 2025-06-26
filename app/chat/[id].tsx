@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
-import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
+import { useLocalSearchParams, Stack } from 'expo-router';
 import { useChatStore } from '@/store/chatStore';
 import { useFriendStore } from '@/store/friendStore';
 import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/Avatar';
 import { formatTimestamp } from '@/utils/timeUtils';
-import { Camera, Send, Check, Clock, CheckCheck } from 'lucide-react-native';
+import { Send, Check, Clock, CheckCheck } from 'lucide-react-native';
 import { Message } from '@/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSocket } from '@/utils/socket';
@@ -15,7 +15,6 @@ import { CHAT_TYPING } from '@/shared/chatEvents';
 
 export default function ChatScreen() {
   const { id, userId } = useLocalSearchParams<{ id: string; userId: string }>();
-  const router = useRouter();
   const { messages, typingIndicators, sendMessage, markChatAsRead, currentChatId, setCurrentChatId, fetchMessages } = useChatStore();
   const { getFriendById } = useFriendStore();
   const { userId: authUserId } = useAuthStore();
@@ -80,10 +79,6 @@ export default function ChatScreen() {
     });
     
     setText('');
-  };
-  
-  const handleCamera = () => {
-    router.push('/(tabs)/camera');
   };
   
   const renderMessage = ({ item }: { item: Message }) => {
@@ -184,9 +179,7 @@ export default function ChatScreen() {
         )}
 
         <View style={[styles.inputContainer, { paddingBottom: insets.bottom }]}> 
-          <TouchableOpacity style={styles.cameraButton} onPress={handleCamera}> 
-            <Camera size={24} color={colors.primary} /> 
-          </TouchableOpacity> 
+          {/* Camera button removed to make chat input text-only */}
           
           <TextInput 
             style={styles.input} 
@@ -291,9 +284,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-  },
-  cameraButton: {
-    padding: 8,
   },
   input: {
     flex: 1,
