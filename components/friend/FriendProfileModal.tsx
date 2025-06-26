@@ -4,13 +4,15 @@ import {
   View,
   Text,
   StyleSheet,
-  Pressable,
+  TouchableWithoutFeedback,
   ScrollView,
   Dimensions,
+  Pressable,
 } from 'react-native';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { colors } from '@/constants/colors';
+import { X as XIcon } from 'lucide-react-native';
 
 interface FriendProfile {
   id: string;
@@ -47,9 +49,23 @@ export const FriendProfileModal: React.FC<FriendProfileModalProps> = ({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.modalContainer} onPress={() => {}}>
-          <ScrollView contentContainerStyle={styles.contentContainer}>
+      {/* Backdrop */}
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.backdrop} />
+      </TouchableWithoutFeedback>
+
+      {/* Modal Card */}
+      <View style={styles.centerContainer}>
+        <View style={styles.modalContainer}>
+          {/* Close icon */}
+          <Pressable style={styles.closeButton} onPress={onClose} hitSlop={8}>
+            <XIcon size={24} color={colors.danger} />
+          </Pressable>
+          <ScrollView
+            style={{ maxHeight: maxModalHeight }}
+            contentContainerStyle={styles.contentContainer}
+            showsVerticalScrollIndicator={false}
+          >
             <Avatar source={profile.avatar} size={90} showBorder style={styles.avatar} />
             <Text style={styles.displayName}>{profile.displayName}</Text>
             <Text style={styles.username}>
@@ -86,7 +102,7 @@ export const FriendProfileModal: React.FC<FriendProfileModalProps> = ({
 
             <View style={styles.buttonsWrapper}>
               <Button
-                title="Send Text Message"
+                title="Send Message"
                 variant="primary"
                 fullWidth
                 onPress={onSendText}
@@ -100,28 +116,41 @@ export const FriendProfileModal: React.FC<FriendProfileModalProps> = ({
               />
             </View>
           </ScrollView>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 };
 
 const { height } = Dimensions.get('window');
+const maxModalHeight = height * 0.8;
 
 const styles = StyleSheet.create({
   backdrop: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  centerContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
   },
   modalContainer: {
     width: '100%',
-    maxHeight: height * 0.8,
     backgroundColor: colors.card,
     borderRadius: 20,
     overflow: 'hidden',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 10,
   },
   contentContainer: {
     padding: 24,
