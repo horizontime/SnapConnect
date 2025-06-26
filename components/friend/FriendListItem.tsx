@@ -18,7 +18,9 @@ export const FriendListItem: React.FC<FriendListItemProps> = ({ username, displa
       <Avatar source={avatar} size={50} showOnlineBadge={true} isOnline={isOnline} />
       <View style={styles.textContainer}>
         <Text style={styles.displayName}>{displayName}</Text>
-        <Text style={styles.username}>@{username}</Text>
+        <Text style={styles.username}>
+          {username.includes('@') ? username : `@${username}`}
+        </Text>
       </View>
     </TouchableOpacity>
   );
