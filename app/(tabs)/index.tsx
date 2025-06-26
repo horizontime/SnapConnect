@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, FlatList, Text, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, FlatList, Text, TouchableOpacity, RefreshControl } from 'react-native';
 import { useChatStore } from '@/store/chatStore';
 import { useSnapStore } from '@/store/snapStore';
 import { ChatListItem } from '@/components/chat/ChatListItem';
@@ -10,6 +10,7 @@ import { useFriendStore } from '@/store/friendStore';
 import { FriendListItem } from '@/components/friend/FriendListItem';
 import { supabase } from '@/utils/supabase';
 import SnapListItem from '@/components/snap/SnapListItem';
+import { diagnoseSnapIssues } from '@/utils/debug';
 
 type StoryListItem = {
   id: string;
@@ -28,6 +29,7 @@ export default function ChatsScreen() {
   const { friends, fetchFriends } = useFriendStore();
   const { snaps, fetchSnaps, subscribeToSnaps } = useSnapStore();
   const [view, setView] = useState<'snaps' | 'chats' | 'friends'>("chats");
+  const [refreshing, setRefreshing] = useState(false);
   
   const chatsWithUserData = getChatsWithUserData();
   
@@ -90,16 +92,46 @@ export default function ChatsScreen() {
     fetchChats();
     fetchFriends();
     if (userId) {
+      console.log('[ChatsScreen] userId available, fetching and subscribing to snaps:', userId);
       fetchSnaps(userId);
       subscribeToSnaps(userId);
+    } else {
+      console.log('[ChatsScreen] No userId available yet');
     }
   }, [userId]);
 
   useEffect(() => {
     if (view === 'friends') {
       fetchFriends();
+    } else if (view === 'snaps' && userId) {
+      // Re-fetch snaps when switching to snaps view
+      console.log('[ChatsScreen] Switching to snaps view, fetching snaps');
+      fetchSnaps(userId);
     }
-  }, [view]);
+  }, [view, userId]);
+
+  // Make diagnostic function available globally for debugging
+  useEffect(() => {
+    if (typeof window !== 'undefined' && userId) {
+      (window as any).diagnoseSnaps = () => diagnoseSnapIssues(userId);
+      console.log('[ChatsScreen] Diagnostic function available: window.diagnoseSnaps()');
+    }
+  }, [userId]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      if (view === 'snaps' && userId) {
+        await fetchSnaps(userId);
+      } else if (view === 'chats') {
+        await fetchChats();
+      } else if (view === 'friends') {
+        await fetchFriends();
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const friendChats = friends
     .filter(f => !chatsWithUserData.some(c => c.user.id === f.id))
@@ -122,12 +154,14 @@ export default function ChatsScreen() {
   // Build display snaps from snap store with sender info
   const displaySnaps = snaps.map(s => ({
     id: s.id,
-    senderName: s.sender?.display_name || 'Unknown',
+    senderName: s.sender?.display_name || s.sender?.username || 'Unknown',
     senderUsername: s.sender?.username || '',
-    senderAvatar: s.sender?.avatar || '',
+    senderAvatar: s.sender?.avatar || s.sender?.avatar_url || '',
     createdAt: s.created_at,
     type: s.type as 'image' | 'video',
   }));
+
+  console.log('[ChatsScreen] Display snaps:', displaySnaps.length);
 
   return (
     <View style={styles.container}>
@@ -174,6 +208,14 @@ export default function ChatsScreen() {
               <Text style={styles.emptySubtext}>Snaps you receive will appear here</Text>
             </View>
           )}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
         />
       ) : view === 'chats' ? (
         <FlatList
