@@ -23,44 +23,65 @@ export default function ProfileScreen() {
   const [favoriteWoods, setFavoriteWoods] = React.useState<string[]>(['Walnut', 'Cherry', 'Maple']);
   const [favoriteTools, setFavoriteTools] = React.useState<string[]>(['Chisels', 'Hand Planes', 'Japanese Saws']);
 
-  const woodOptions = React.useMemo(
-    () => [
-      'Walnut',
+  const woodOptions = React.useMemo(() => {
+    const woods = [
+      'Alder',
+      'Ash',
+      'Balsa',
+      'Beech',
+      'Birch',
+      'Bubinga',
+      'Butternut',
+      'Cedar',
       'Cherry',
+      'Cocobolo',
+      'Elm',
+      'Hickory',
+      'Ipe',
+      'Mahogany',
       'Maple',
       'Oak',
-      'Ash',
-      'Mahogany',
+      'Padauk',
       'Pine',
-      'Cedar',
-      'Birch',
-      'Teak',
-      'Rosewood',
-      'Elm',
-      'Beech',
       'Poplar',
-      'Hickory',
-    ],
-    []
-  );
+      'Purpleheart',
+      'Rosewood',
+      'Sapele',
+      'Sycamore',
+      'Teak',
+      'Walnut',
+      'Zebrawood',
+    ];
+    return woods.sort((a, b) => a.localeCompare(b));
+  }, []);
 
-  const toolOptions = React.useMemo(
-    () => [
-      'Chisels',
-      'Hand Planes',
-      'Japanese Saws',
-      'Router',
-      'Table Saw',
+  const toolOptions = React.useMemo(() => {
+    const tools = [
       'Band Saw',
-      'Drill Press',
-      'Lathe',
-      'Hammer',
+      'Block Plane',
+      'Cabinet Scraper',
+      'Chisels',
       'Clamps',
-      'Screwdrivers',
+      'Combination Square',
+      'Dovetail Saw',
+      'Drill Press',
+      'Hammer',
+      'Hand Planes',
+      'Jack Plane',
+      'Japanese Saws',
+      'Lathe',
+      'Mallet',
+      'Marking Gauge',
+      'Measuring Tape',
+      'Router',
       'Sanders',
-    ],
-    []
-  );
+      'Screwdrivers',
+      'Spokeshave',
+      'Square',
+      'Table Saw',
+    ];
+    return tools.sort((a, b) => a.localeCompare(b));
+  }, []);
 
   const [isWoodPickerVisible, setIsWoodPickerVisible] = React.useState<boolean>(false);
   const [isToolPickerVisible, setIsToolPickerVisible] = React.useState<boolean>(false);
@@ -255,6 +276,31 @@ export default function ProfileScreen() {
     }
   };
   
+  const confirmRemove = (
+    item: string,
+    removeCb: () => void,
+    type: 'wood' | 'tool'
+  ) => {
+    Alert.alert(
+      `Remove ${item}?`,
+      `Are you sure you want to remove this ${type} from your favorites?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: removeCb },
+      ]
+    );
+  };
+
+  const handleRemoveWood = (wood: string) => {
+    confirmRemove(wood, () =>
+      setFavoriteWoods((prev) => prev.filter((w) => w !== wood)), 'wood');
+  };
+
+  const handleRemoveTool = (tool: string) => {
+    confirmRemove(tool, () =>
+      setFavoriteTools((prev) => prev.filter((t) => t !== tool)), 'tool');
+  };
+  
   if (!isAuthenticated) {
     return (
       <View style={styles.authContainer}>
@@ -366,9 +412,13 @@ export default function ProfileScreen() {
         </View>
         <View style={styles.tagsContainer}>
           {favoriteWoods.map((wood) => (
-            <View key={wood} style={styles.tag}>
+            <TouchableOpacity
+              key={wood}
+              style={styles.tag}
+              onPress={() => handleRemoveWood(wood)}
+            >
               <Text style={styles.tagText}>{wood}</Text>
-            </View>
+            </TouchableOpacity>
           ))}
           <TouchableOpacity
             onPress={() => setIsWoodPickerVisible(true)}
@@ -419,9 +469,13 @@ export default function ProfileScreen() {
         </View>
         <View style={styles.tagsContainer}>
           {favoriteTools.map((tool) => (
-            <View key={tool} style={styles.tag}>
+            <TouchableOpacity
+              key={tool}
+              style={styles.tag}
+              onPress={() => handleRemoveTool(tool)}
+            >
               <Text style={styles.tagText}>{tool}</Text>
-            </View>
+            </TouchableOpacity>
           ))}
           <TouchableOpacity
             onPress={() => setIsToolPickerVisible(true)}
@@ -574,9 +628,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   addTagCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.primary,
     justifyContent: 'center',
