@@ -40,20 +40,38 @@ function VideoPreview({ uri }: { uri: string }) {
 
 export default function ModalScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ screen?: string; mediaUri?: string; mediaType?: string; overlayMeta?: string }>();
+  const params = useLocalSearchParams<{ screen?: string; mode?: string; mediaUri?: string; mediaType?: string; overlayMeta?: string }>();
+  
+  // Debug logging to see what params are received
+  console.log('Modal params:', {
+    screen: params.screen,
+    mode: params.mode,
+    mediaUri: params.mediaUri,
+    mediaType: params.mediaType,
+    overlayMeta: params.overlayMeta,
+  });
+  console.log('Raw params object:', params);
+  console.log('All param keys:', Object.keys(params));
+  
+  // Check both screen and mode parameters
+  const shouldShowFriends = params.screen === 'selectFriends' || params.mode === 'selectFriends';
   
   // If not showing friend selection, show default modal
-  if (params.screen !== 'selectFriends') {
+  if (!shouldShowFriends) {
+    console.log('Not selectFriends, showing default modal. Screen param:', params.screen, 'Mode param:', params.mode);
     return (
       <View style={styles.container}>
         <Text style={styles.title}>Modal</Text>
         <View style={styles.separator} />
         <Text>This is an example modal. You can edit it in app/modal.tsx.</Text>
+        <Text>Screen param: {params.screen || 'undefined'}</Text>
+        <Text>Mode param: {params.mode || 'undefined'}</Text>
         <StatusBar style={Platform.OS === "ios" ? "light" : "auto"} />
       </View>
     );
   }
 
+  console.log('Showing SelectFriendsScreen');
   return <SelectFriendsScreen />;
 }
 

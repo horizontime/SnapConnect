@@ -68,18 +68,17 @@ export default function SnapEditorScreen() {
   };
 
   const handleContinue = async () => {
+    console.log('handleContinue called. mediaType:', mediaType);
     if (mediaType === 'image') {
       try {
         const uri = await viewShotRef.current?.capture?.();
+        console.log('Captured image URI:', uri);
         if (uri) {
-          router.push({
-            pathname: '/modal',
-            params: {
-              screen: 'selectFriends',
-              mediaUri: uri,
-              mediaType: 'image',
-            },
-          });
+          // Construct URL with query parameters
+          const encodedUri = encodeURIComponent(uri);
+          const url = `/modal?mode=selectFriends&mediaUri=${encodedUri}&mediaType=image` as const;
+          console.log('Navigating to:', url);
+          router.push(url as any);
         }
       } catch (e) {
         console.warn('ViewShot error', e);
@@ -87,15 +86,11 @@ export default function SnapEditorScreen() {
     } else {
       // video – send overlay metadata
       const overlayMeta = JSON.stringify(overlays);
-      router.push({
-        pathname: '/modal',
-        params: {
-          screen: 'selectFriends',
-          mediaUri: mediaUri as string,
-          mediaType: 'video',
-          overlayMeta,
-        },
-      });
+      const encodedUri = encodeURIComponent(mediaUri as string);
+      const encodedOverlay = encodeURIComponent(overlayMeta);
+      const url = `/modal?mode=selectFriends&mediaUri=${encodedUri}&mediaType=video&overlayMeta=${encodedOverlay}` as const;
+      console.log('Navigating to video modal:', url);
+      router.push(url as any);
     }
   };
 
