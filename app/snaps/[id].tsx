@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Image, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Image, StyleSheet, TouchableOpacity, Text, BackHandler } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { supabase } from '@/utils/supabase';
 import { useAuthStore } from '@/store/authStore';
@@ -30,12 +30,22 @@ export default function SnapViewer() {
     fetchSnap();
   }, [id]);
 
-  const handleClose = async () => {
+  const handleClose = useCallback(async () => {
     if (id) {
       await markViewed(id as string);
     }
     router.back();
-  };
+  }, [id, markViewed, router]);
+
+  // Handle Android back button
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleClose();
+      return true; // Prevent default back behavior
+    });
+
+    return () => backHandler.remove();
+  }, [handleClose]);
 
   if (loading) return null;
   if (!snap) return (
