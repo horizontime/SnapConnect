@@ -52,21 +52,28 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 export async function ensureMediaBuckets() {
   try {
     // Since buckets are created manually in Supabase dashboard,
-    // we'll just verify they exist by trying to get their details
+    // we'll verify they're accessible by trying a simple operation
     const requiredBuckets = ['snaps', 'stories'];
     
     for (const bucketName of requiredBuckets) {
-      const { data, error } = await supabase.storage.getBucket(bucketName);
+      // Try to list files in the bucket (empty result is fine, we just want to check access)
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .list('', { limit: 1 });
       
       if (error) {
-        console.warn(`[Supabase] ${bucketName} bucket not accessible:`, error.message);
-        console.log(`[Supabase] Please create the ${bucketName} bucket manually in the Supabase dashboard`);
-        console.log(`[Supabase] Make it public and add appropriate RLS policies`);
+        console.warn(`[Supabase] ${bucketName} bucket check failed:`, error.message);
+        // If the error is about the bucket not existing, provide guidance
+        if (error.message.includes('not found')) {
+          console.log(`[Supabase] Please create the ${bucketName} bucket in the Supabase dashboard`);
+          console.log(`[Supabase] Make it public and add INSERT/SELECT RLS policies`);
+        }
       } else {
         console.log(`[Supabase] ✓ ${bucketName} bucket is ready`);
       }
     }
 
+    console.log('[Supabase] Storage initialization complete');
     return true;
   } catch (error) {
     console.error('Error checking buckets:', error);
