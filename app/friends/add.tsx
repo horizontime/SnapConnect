@@ -70,7 +70,7 @@ export default function AddFriendsScreen() {
       if (error) throw error;
 
       addFriendLocal(friend);
-      Alert.alert('Success', `@${friend.username} added to your friends!`);
+      Alert.alert('Success', `${friend.username} added to your friends!`);
     } catch (err: any) {
       console.error('[AddFriend]', err.message);
       Alert.alert('Error', err.message || 'Failed to add friend.');
@@ -86,7 +86,7 @@ export default function AddFriendsScreen() {
       <Avatar source={item.avatar} size={40} />
       <View style={styles.itemTextContainer}>
         <Text style={styles.name}>{item.displayName}</Text>
-        <Text style={styles.username}>@{item.username}</Text>
+        <Text style={styles.username}>{item.username}</Text>
       </View>
       <TouchableOpacity style={styles.addButton} onPress={() => handleAddFriend(item)}>
         <Text style={styles.addButtonText}>Add</Text>
