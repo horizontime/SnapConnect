@@ -4,6 +4,8 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { colors } from "@/constants/colors";
+import * as NavigationBar from "expo-navigation-bar";
+import { Platform } from "react-native";
 
 export const unstable_settings = {
   initialRouteName: "(tabs)",
@@ -29,6 +31,14 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
+
+  useEffect(() => {
+    // Set Android system navigation bar background color to light gray on app launch
+    if (Platform.OS === 'android') {
+      NavigationBar.setBackgroundColorAsync('#D3D3D3'); // Light gray
+      NavigationBar.setButtonStyleAsync('dark');
+    }
+  }, []);
 
   if (!loaded) {
     return null;
