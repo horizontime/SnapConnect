@@ -82,40 +82,42 @@ export default function SignupScreen() {
         <View style={styles.formContainer}>
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
           
-          <TextInput
-            style={styles.input}
-            placeholder="Full Name"
-            value={displayName}
-            onChangeText={setDisplayName}
-            autoCorrect={false}
-          />
-          
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-          />
-          
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          
-          <Button
-            title="Sign Up"
-            onPress={handleSignUp}
-            loading={isLoading}
-            disabled={!displayName || !username || !password}
-            style={styles.button}
-            fullWidth
-          />
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Full Name"
+              value={displayName}
+              onChangeText={setDisplayName}
+              autoCorrect={false}
+            />
+            
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+            />
+            
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+            
+            <Button
+              title="Sign Up"
+              onPress={handleSignUp}
+              loading={isLoading}
+              disabled={!displayName || !username || !password}
+              style={styles.button}
+              fullWidth
+            />
+          </View>
         </View>
         
         <View style={styles.footer}>
@@ -162,6 +164,11 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     marginBottom: 24,
+    alignItems: 'center',
+  },
+  inputContainer: {
+    width: '100%',
+    maxWidth: 320,
   },
   input: {
     backgroundColor: colors.card,

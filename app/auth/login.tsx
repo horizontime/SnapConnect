@@ -94,35 +94,37 @@ export default function LoginScreen() {
         <View style={styles.formContainer}>
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
           
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          
-          <Button
-            title="Log In"
-            onPress={handleLogin}
-            loading={isLoading}
-            disabled={!username || !password}
-            style={styles.button}
-            fullWidth
-          />
-          
-          <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+            
+            <Button
+              title="Log In"
+              onPress={handleLogin}
+              loading={isLoading}
+              disabled={!username || !password}
+              style={styles.button}
+              fullWidth
+            />
+            
+            <TouchableOpacity style={styles.forgotPassword}>
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         
         <View style={styles.footer}>
@@ -165,6 +167,11 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     marginBottom: 24,
+    alignItems: 'center',
+  },
+  inputContainer: {
+    width: '100%',
+    maxWidth: 320,
   },
   input: {
     backgroundColor: colors.card,
