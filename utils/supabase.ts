@@ -264,23 +264,42 @@ export async function createStory(params: {
   type: 'image' | 'video';
   caption?: string;
   metadata?: any;
+  title?: string;
+  description?: string;
   expiresInHours?: number;
 }) {
-  const { userId, mediaUrl, thumbnailUrl, type, caption, metadata, expiresInHours = 24 } = params;
+  const { userId, mediaUrl, thumbnailUrl, type, caption, metadata, title, description, expiresInHours = 24 } = params;
 
   const expires_at = new Date(Date.now() + expiresInHours * 3600 * 1000).toISOString();
 
-  const { error } = await supabase.from('stories').insert({
+  const insertData = {
     user_id: userId,
     media_url: mediaUrl,
     thumbnail_url: thumbnailUrl ?? null,
     type,
     caption: caption ?? null,
     metadata: metadata ?? null,
+    title: title ?? null,
+    description: description ?? null,
     expires_at,
-  });
+  };
 
-  if (error) throw error;
+  console.log('[createStory] Inserting story with data:', insertData);
+
+  const { error } = await supabase.from('stories').insert(insertData);
+
+  if (error) {
+    console.error('[createStory] Database insert failed:', error);
+    console.error('[createStory] Error details:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    });
+    throw error;
+  }
+
+  console.log('[createStory] Story created successfully');
 }
 
 /**

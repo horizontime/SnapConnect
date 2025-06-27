@@ -13,6 +13,7 @@ type StoryState = {
   markStoryAsViewed: (storyId: string) => void;
   getMyStories: (userId: string) => Story[];
   getFriendsStories: (userId: string) => (Story & { user: User })[];
+  getAllStories: () => any[];
   fetchStories: (userId?: string) => Promise<void>;
   subscribeToRealtime: (userId: string) => void;
 };
@@ -88,6 +89,10 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     });
   },
   
+  getAllStories: () => {
+    return get().stories;
+  },
+  
   // Fetch stories from Supabase (replaces mock data when available)
   fetchStories: async (userId) => {
     const { data, error } = await supabase
@@ -102,20 +107,48 @@ export const useStoryStore = create<StoryState>((set, get) => ({
 
     let stories: any[] = data || [];
 
+    // If userId is provided, fetch friend relationships and view status
     if (userId) {
+      // Fetch friend relationships
+      const { data: friendships } = await supabase
+        .from('friends')
+        .select('user_id, friend_id')
+        .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+
+      const friendIds = new Set(
+        (friendships || []).map(f => 
+          f.user_id === userId ? f.friend_id : f.user_id
+        )
+      );
+
+      // Fetch view status
       const { data: views } = await supabase
         .from('story_views')
         .select('story_id')
         .eq('viewer_id', userId);
 
       const viewedIds = new Set((views || []).map(v => v.story_id));
-      stories = stories.map(s => ({ ...s, viewed: viewedIds.has(s.id) }));
+
+      // Map stories with friend and view status
+      stories = stories.map(s => {
+        const isFriend = friendIds.has(s.user_id);
+        return {
+          ...s,
+          viewed: viewedIds.has(s.id),
+          user: {
+            ...s.user,
+            isFriend,
+          },
+        };
+      });
     }
 
-    // ensure lastUpdated field exists for ordering
+    // ensure required fields exist
     stories = stories.map((s: any) => ({
       ...s,
+      userId: s.user_id,
       lastUpdated: s.lastUpdated || s.created_at || new Date().toISOString(),
+      items: [], // Stories in new structure don't have items
     }));
 
     set({ stories });

@@ -11,16 +11,25 @@ interface Props {
   hasStory: boolean;
   isViewed: boolean;
   onPress: () => void;
+  title?: string;
+  description?: string;
 }
 
-const StoryCard: React.FC<Props> = ({ id, username, avatar, previewUrl, hasStory, isViewed, onPress }) => {
+const StoryCard: React.FC<Props> = ({ id, username, avatar, previewUrl, hasStory, isViewed, onPress, title, description }) => {
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.9}>
       <Image source={{ uri: previewUrl }} style={styles.preview} />
+      <View style={styles.gradient} />
       <View style={styles.overlay}>
         <StoryRing source={avatar} size={40} hasStory={hasStory} isViewed={isViewed} />
         <Text style={styles.name} numberOfLines={1}>{username}</Text>
       </View>
+      {(title || description) && (
+        <View style={styles.textOverlay}>
+          {title && <Text style={styles.title} numberOfLines={1}>{title}</Text>}
+          {description && <Text style={styles.description} numberOfLines={2}>{description}</Text>}
+        </View>
+      )}
     </TouchableOpacity>
   );
 };
@@ -41,6 +50,10 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  gradient: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
   overlay: {
     position: 'absolute',
     left: 8,
@@ -51,6 +64,23 @@ const styles = StyleSheet.create({
     color: colors.card,
     fontSize: 12,
     marginTop: 2,
+  },
+  textOverlay: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    right: 8,
+  },
+  title: {
+    color: colors.card,
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  description: {
+    color: colors.card,
+    fontSize: 12,
+    opacity: 0.9,
   },
 });
 

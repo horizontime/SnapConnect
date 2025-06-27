@@ -7,9 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import OverlayItem, { OverlayData } from '@/components/snap-editor/OverlayItem';
 import { nanoid } from 'nanoid/non-secure';
 import { TouchableOpacity, Text } from 'react-native';
-import { Type, Smile, Upload } from 'lucide-react-native';
-import { uploadMedia, createStory } from '@/utils/supabase';
-import { generateThumbnail } from '@/utils/upload';
+import { Type, Smile } from 'lucide-react-native';
 import { useAuthStore } from '@/store/authStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system';
@@ -123,65 +121,44 @@ export default function SnapEditorScreen() {
 
   const handlePostStory = async () => {
     if (!userId) return;
-    let finalUri: string | undefined;
-    let overlayMeta: any = overlays;
 
     try {
-      if (mediaType === 'image') {
-        // Capture the view
+      let finalUri = mediaUri as string;
+      
+      // For images, we need to capture the view with overlays
+      if (mediaType === 'image' && overlays.length > 0) {
         const tempUri = await viewShotRef.current?.capture?.();
         
         if (tempUri) {
-          // Copy to persistent location for story
-          const fileName = `story_${Date.now()}.png`;
+          // Copy to persistent location
+          const fileName = `story_preview_${Date.now()}.png`;
           finalUri = `${FileSystem.documentDirectory}${fileName}`;
           
           await FileSystem.copyAsync({
             from: tempUri,
             to: finalUri
           });
-          
-          // Verify the captured file exists
-          const fileInfo = await FileSystem.getInfoAsync(finalUri);
-          if (!fileInfo.exists) {
-            throw new Error('Failed to save story image');
-          }
-        }
-      } else {
-        finalUri = mediaUri as string;
-      }
-
-      if (!finalUri) throw new Error('No media URI');
-
-      // Upload media to stories bucket
-      const { publicUrl } = await uploadMedia('stories', finalUri);
-
-      let thumbnailUrl: string | undefined;
-      if (mediaType === 'video') {
-        const thumb = await generateThumbnail(finalUri);
-        if (thumb) {
-          const thumbUpload = await uploadMedia('stories', thumb);
-          thumbnailUrl = thumbUpload.publicUrl;
         }
       }
 
-      await createStory({
-        userId,
-        mediaUrl: publicUrl,
-        thumbnailUrl,
-        type: mediaType as 'image' | 'video',
-        metadata: mediaType === 'video' ? overlayMeta : null,
-        caption: overlays.find(o => o.type === 'caption')?.text,
+      // Navigate to story creation page
+      const overlayMeta = overlays.length > 0 ? JSON.stringify(overlays) : undefined;
+      const encodedUri = encodeURIComponent(finalUri);
+      const params: any = {
+        mediaUri: encodedUri,
+        mediaType,
+      };
+      
+      if (overlayMeta) {
+        params.overlayMeta = encodeURIComponent(overlayMeta);
+      }
+      
+      router.push({
+        pathname: '/story/create' as any,
+        params,
       });
-
-      // Clean up temporary files if we created them
-      if (mediaType === 'image' && finalUri && FileSystem.documentDirectory && finalUri.includes(FileSystem.documentDirectory)) {
-        await FileSystem.deleteAsync(finalUri, { idempotent: true }).catch(() => {});
-      }
-
-      router.back();
     } catch (e) {
-      console.error('Story upload failed:', e);
+      console.error('Failed to prepare story:', e);
     }
   };
 
