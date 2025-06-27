@@ -5,7 +5,7 @@ import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { useRouter } from 'expo-router';
-import { Settings, QrCode, UserPlus, LogOut, Camera, Plus, Pencil, X, Save } from 'lucide-react-native';
+import { Settings, QrCode, UserPlus, UserMinus, LogOut, Camera, Plus, Pencil, X, Save } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
@@ -157,6 +157,10 @@ export default function ProfileScreen() {
   
   const handleAddFriends = () => {
     router.push('/friends/add' as any);
+  };
+  
+  const handleRemoveFriends = () => {
+    router.push('/friends/remove' as any);
   };
   
   const handleSettings = () => {
@@ -468,18 +472,18 @@ export default function ProfileScreen() {
       </View>
       
       <View style={styles.actionsContainer}>
-        <TouchableOpacity style={styles.actionButton} onPress={handleShowQR}>
-          <View style={styles.actionIcon}>
-            <QrCode size={24} color={colors.primary} />
-          </View>
-          <Text style={styles.actionText}>My ShopTag</Text>
-        </TouchableOpacity>
-        
         <TouchableOpacity style={styles.actionButton} onPress={handleAddFriends}>
           <View style={styles.actionIcon}>
             <UserPlus size={24} color={colors.primary} />
           </View>
           <Text style={styles.actionText}>Add Friends</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.actionButton} onPress={handleRemoveFriends}>
+          <View style={styles.actionIcon}>
+            <UserMinus size={24} color={colors.primary} />
+          </View>
+          <Text style={styles.actionText}>Remove Friends</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.actionButton} onPress={handleSettings}>

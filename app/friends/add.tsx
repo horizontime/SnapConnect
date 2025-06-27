@@ -63,11 +63,35 @@ export default function AddFriendsScreen() {
   const handleAddFriend = async (friend: User) => {
     Keyboard.dismiss();
     try {
-      const { error } = await supabase
+      // Create bidirectional friendship - insert both directions
+      const { error: error1 } = await supabase
         .from('friends')
         .insert({ user_id: userId, friend_id: friend.id });
 
-      if (error) throw error;
+      if (error1) {
+        // Check if it's a duplicate key error
+        if (error1.code === '23505') {
+          Alert.alert('Info', `You're already friends with ${friend.username}!`);
+          return;
+        }
+        throw error1;
+      }
+
+      // Insert the reverse direction
+      const { error: error2 } = await supabase
+        .from('friends')
+        .insert({ user_id: friend.id, friend_id: userId });
+
+      if (error2 && error2.code !== '23505') {
+        // If second insert fails (and it's not a duplicate), try to clean up the first
+        console.error('[AddFriend] Failed to create reverse friendship:', error2);
+        await supabase
+          .from('friends')
+          .delete()
+          .eq('user_id', userId)
+          .eq('friend_id', friend.id);
+        throw error2;
+      }
 
       addFriendLocal(friend);
       Alert.alert('Success', `${friend.username} added to your friends!`);
