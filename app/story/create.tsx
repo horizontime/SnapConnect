@@ -19,7 +19,7 @@ import { ChevronLeft } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { uploadMedia, createStory } from '@/utils/supabase';
-import { generateThumbnail } from '@/utils/upload';
+import { generateThumbnail, compressImage } from '@/utils/upload';
 import * as FileSystem from 'expo-file-system';
 import ViewShot from 'react-native-view-shot';
 
@@ -82,8 +82,20 @@ export default function CreateStoryScreen() {
         }
       }
 
+      // Compress image before upload (only for images)
+      let mediaToUpload = finalUri;
+      if (mediaType === 'image') {
+        console.log('[StoryCreate] Compressing image before upload...');
+        mediaToUpload = await compressImage(finalUri, {
+          compress: 0.7,
+          maxWidth: 1080,
+          maxHeight: 1920,
+        });
+        console.log('[StoryCreate] Image compressed:', mediaToUpload);
+      }
+
       // Upload media to stories bucket
-      const { publicUrl } = await uploadMedia('stories', finalUri);
+      const { publicUrl } = await uploadMedia('stories', mediaToUpload);
 
       let thumbnailUrl: string | undefined;
       if (mediaType === 'video') {

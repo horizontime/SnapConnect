@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Image, StyleSheet, TouchableOpacity, Text, BackHandler } from 'react-native';
+import { View, Image, StyleSheet, TouchableOpacity, Text, BackHandler, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { supabase } from '@/utils/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { useSnapStore } from '@/store/snapStore';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import OverlayItem from '@/components/snap-editor/OverlayItem';
+import { colors } from '@/constants/colors';
 
 export default function SnapViewer() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -15,12 +16,14 @@ export default function SnapViewer() {
 
   const [snap, setSnap] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [imageLoading, setImageLoading] = useState(true);
 
   useEffect(() => {
     const fetchSnap = async () => {
       if (!id) return;
       const { data, error } = await supabase.from('snaps').select('*').eq('id', id).single();
       if (error) {
+        console.error('[SnapViewer] Error fetching snap:', error);
         setLoading(false);
         return;
       }
@@ -47,18 +50,46 @@ export default function SnapViewer() {
     return () => backHandler.remove();
   }, [handleClose]);
 
-  if (loading) return null;
-  if (!snap) return (
-    <View style={styles.center}><Text>Snap not found</Text></View>
-  );
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (!snap) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>Snap not found</Text>
+      </View>
+    );
+  }
 
   const overlayMeta = snap.overlay_meta ? JSON.parse(snap.overlay_meta) : [];
 
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
+      
+      {imageLoading && snap.type === 'image' && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      )}
+      
       {snap.type === 'image' ? (
-        <Image source={{ uri: snap.media_url }} style={styles.media} resizeMode="contain" />
+        <Image 
+          source={{ uri: snap.media_url }} 
+          style={styles.media} 
+          resizeMode="contain"
+          onLoadStart={() => setImageLoading(true)}
+          onLoadEnd={() => setImageLoading(false)}
+          onError={() => {
+            console.error('[SnapViewer] Failed to load image:', snap.media_url);
+            setImageLoading(false);
+          }}
+        />
       ) : (
         <VideoPlayer uri={snap.media_url} />
       )}
@@ -68,7 +99,7 @@ export default function SnapViewer() {
         <OverlayItem key={ov.id} data={ov} onUpdate={() => {}} editable={false} />
       ))}
 
-      <TouchableOpacity style={styles.closeArea} onPress={handleClose} />
+      <TouchableOpacity style={styles.closeArea} onPress={handleClose} activeOpacity={1} />
     </View>
   );
 }
@@ -79,8 +110,36 @@ function VideoPlayer({ uri }: { uri: string }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
-  media: { flex: 1 },
-  closeArea: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 },
-  center: { flex:1, alignItems:'center', justifyContent:'center' }
+  container: { 
+    flex: 1, 
+    backgroundColor: '#000' 
+  },
+  media: { 
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  closeArea: { 
+    position: 'absolute', 
+    top: 0, 
+    bottom: 0, 
+    left: 0, 
+    right: 0 
+  },
+  center: { 
+    flex: 1, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    backgroundColor: '#000',
+  },
+  loadingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: colors.textLight,
+    fontSize: 16,
+  },
 }); 

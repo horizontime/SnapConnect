@@ -20,6 +20,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { ArrowLeft, Send, Check } from 'lucide-react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { uploadMedia, createSnap } from '@/utils/supabase';
+import { compressImage } from '@/utils/upload';
 
 // Video preview component using expo-video
 function VideoPreview({ uri }: { uri: string }) {
@@ -96,48 +97,56 @@ function SelectFriendsScreen() {
     });
   };
 
-  const handleSend = async () => {
-    if (selectedFriends.length === 0) {
-      Alert.alert('Select Friends', 'Please select at least one friend to send to');
-      return;
-    }
+  const sendSnap = async () => {
+    // debug logging
+    console.log('[sendSnap] Starting snap send process');
+    console.log('[sendSnap] Recipients:', selectedFriends);
+    console.log('[sendSnap] Media URI:', params.mediaUri);
+    console.log('[sendSnap] Media Type:', params.mediaType);
 
-    if (!params.mediaUri || !params.mediaType || !userId) {
-      Alert.alert('Error', 'Missing media or user');
+    if (!params.mediaUri || selectedFriends.length === 0 || !userId) {
+      console.log('[sendSnap] Missing required parameters');
+      console.log('[sendSnap] hasMediaUri:', !!params.mediaUri);
+      console.log('[sendSnap] selectedFriendsCount:', selectedFriends.length);
+      console.log('[sendSnap] hasUserId:', !!userId);
       return;
     }
 
     setIsSending(true);
 
     try {
-      // Upload media to snaps bucket
-      const { publicUrl } = await uploadMedia('snaps', params.mediaUri);
-
-      // Parse overlay metadata if provided
-      let meta: any = null;
-      if (params.overlayMeta) {
-        try {
-          meta = JSON.parse(params.overlayMeta as string);
-        } catch {}
+      // Compress image before upload (only for images)
+      let mediaToUpload = params.mediaUri as string;
+      if (params.mediaType === 'image') {
+        console.log('[sendSnap] Compressing image before upload...');
+        mediaToUpload = await compressImage(params.mediaUri as string, {
+          compress: 0.7,
+          maxWidth: 1080,
+          maxHeight: 1920,
+        });
+        console.log('[sendSnap] Image compressed:', mediaToUpload);
       }
 
+      // Upload media to storage
+      console.log('[sendSnap] Uploading media to storage...');
+      const { publicUrl } = await uploadMedia('snaps', mediaToUpload);
+      console.log('[sendSnap] Upload successful, public URL:', publicUrl);
+
+      // Create snap with all recipients
+      console.log('[sendSnap] Creating snap in database...');
       await createSnap({
         senderId: userId,
         recipientIds: selectedFriends,
         mediaUrl: publicUrl,
-        type: params.mediaType as 'image' | 'video',
-        overlayMeta: meta,
+        type: params.mediaType === 'video' ? 'video' : 'image',
+        overlayMeta: params.overlayMeta ? JSON.parse(params.overlayMeta as string) : undefined,
       });
 
-      Alert.alert(
-        'Sent!',
-        `Snap sent to ${selectedFriends.length} friend${selectedFriends.length > 1 ? 's' : ''}`,
-        [{ text: 'OK', onPress: () => router.replace('/(tabs)/camera') }]
-      );
-    } catch (error) {
-      console.error('Failed to send snap:', error);
-      Alert.alert('Error', 'Failed to send snap. Please try again.');
-    } finally {
+      console.log('[sendSnap] Snap created successfully');
+      // Navigate back to camera
+      router.replace('/(tabs)/camera');
+    } catch (e) {
+      console.error('[sendSnap] Failed to send snap:', e);
       setIsSending(false);
     }
   };
@@ -176,7 +185,7 @@ function SelectFriendsScreen() {
         </TouchableOpacity>
         <Text style={styles.selectTitle}>Send To...</Text>
         <TouchableOpacity 
-          onPress={handleSend} 
+          onPress={sendSnap} 
           style={[styles.sendButton, selectedFriends.length === 0 && styles.sendButtonDisabled]}
           disabled={isSending || selectedFriends.length === 0}
         >

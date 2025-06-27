@@ -17,6 +17,10 @@ export default function StoriesScreen() {
   // Get all stories and categorize them
   const allStories = getAllStories();
   
+  // Add debug logging
+  console.log('[StoriesScreen] Total stories:', allStories.length);
+  console.log('[StoriesScreen] Current userId:', userId);
+  
   // Filter stories into categories
   const myStories = userId ? allStories.filter((s: any) => s.userId === userId || s.user_id === userId) : [];
   const friendsStories = userId ? allStories.filter((s: any) => 
@@ -25,6 +29,21 @@ export default function StoriesScreen() {
   const otherStories = userId ? allStories.filter((s: any) => 
     (s.userId !== userId && s.user_id !== userId) && !s.user?.isFriend
   ) : allStories;
+  
+  // Debug logging for each category
+  console.log('[StoriesScreen] My stories:', myStories.length);
+  console.log('[StoriesScreen] Friends stories:', friendsStories.length);
+  console.log('[StoriesScreen] Other/Recommended stories:', otherStories.length);
+  
+  if (otherStories.length > 0) {
+    console.log('[StoriesScreen] Sample recommended story:', {
+      id: otherStories[0].id,
+      userId: otherStories[0].user_id,
+      hasUser: !!otherStories[0].user,
+      mediaUrl: otherStories[0].media_url,
+      thumbnailUrl: otherStories[0].thumbnail_url,
+    });
+  }
   
   // Initial fetch and realtime subscription
   useEffect(() => {
