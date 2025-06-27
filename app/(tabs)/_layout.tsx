@@ -2,9 +2,34 @@ import React from 'react';
 import { Tabs, Redirect } from 'expo-router';
 import { Camera, MessageSquare, Users, User } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
-import { TouchableOpacity, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View, Platform } from 'react-native';
 import { useAuthStore } from '@/store/authStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// Custom tab bar button with smaller touch feedback
+const CustomTabBarButton = ({ children, onPress, accessibilityState }: any) => {
+  const isSelected = accessibilityState?.selected;
+  
+  return (
+    <View style={styles.tabButton}>
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.tabButtonInner,
+          Platform.OS === 'ios' && pressed && styles.iosPressed
+        ]}
+        android_ripple={{
+          color: 'rgba(0, 0, 0, 0.1)',
+          borderless: false, // Keep ripple within bounds
+          radius: 30, // 1.5 times bigger (was 20)
+          foreground: true, // Ripple on top of content
+        }}
+      >
+        {children}
+      </Pressable>
+    </View>
+  );
+};
 
 export default function TabLayout() {
   const { isAuthenticated } = useAuthStore();
@@ -38,6 +63,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <MessageSquare size={size} color={color} />
           ),
+          tabBarButton: (props) => <CustomTabBarButton {...props} />,
         }}
       />
       <Tabs.Screen
@@ -48,6 +74,7 @@ export default function TabLayout() {
             <Camera size={size} color={color} />
           ),
           headerShown: false,
+          tabBarButton: (props) => <CustomTabBarButton {...props} />,
         }}
       />
       <Tabs.Screen
@@ -57,6 +84,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Users size={size} color={color} />
           ),
+          tabBarButton: (props) => <CustomTabBarButton {...props} />,
         }}
       />
       <Tabs.Screen
@@ -66,6 +94,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <User size={size} color={color} />
           ),
+          tabBarButton: (props) => <CustomTabBarButton {...props} />,
         }}
       />
     </Tabs>
@@ -84,5 +113,21 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: colors.text,
     fontWeight: '600',
+  },
+  tabButton: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tabButtonInner: {
+    width: 60,  // 1.5x bigger (was 40)
+    height: 60, // 1.5x bigger (was 40)
+    borderRadius: 30, // 1.5x bigger (was 20)
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden', // Ensure circular clipping
+  },
+  iosPressed: {
+    opacity: 0.6, // Just reduce opacity instead of adding background
   },
 });
