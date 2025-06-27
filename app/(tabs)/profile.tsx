@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '@/utils/supabase';
+import { useChatStore } from '@/store/chatStore';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -142,11 +143,11 @@ export default function ProfileScreen() {
   const [isToolPickerVisible, setIsToolPickerVisible] = React.useState<boolean>(false);
   const [isProjectPickerVisible, setIsProjectPickerVisible] = React.useState<boolean>(false);
   
-  const handleLogin = () => {
-    router.push('/auth/login');
-  };
-  
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Clean up socket listeners before logging out
+    await useChatStore.getState().cleanup();
+    // Sign out from Supabase
+    await supabase.auth.signOut();
     logout();
   };
   
@@ -430,26 +431,6 @@ export default function ProfileScreen() {
     setAbout(aboutOriginal);
     setIsEditingAbout(false);
   };
-  
-  if (!isAuthenticated) {
-    return (
-      <View style={styles.authContainer}>
-        <Text style={styles.authTitle}>Welcome to SnapConnect</Text>
-        <Text style={styles.authSubtitle}>Connect with fellow woodworkers</Text>
-        <Button 
-          title="Log In" 
-          onPress={handleLogin} 
-          style={styles.authButton}
-        />
-        <Button 
-          title="Sign Up" 
-          onPress={handleLogin} 
-          variant="outline" 
-          style={styles.authButton}
-        />
-      </View>
-    );
-  }
   
   return (
     <ScrollView style={styles.container}>
@@ -909,28 +890,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.danger,
     marginLeft: 8,
-  },
-  authContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: colors.background,
-  },
-  authTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  authSubtitle: {
-    fontSize: 16,
-    color: colors.textLight,
-    marginBottom: 32,
-    textAlign: 'center',
-  },
-  authButton: {
-    width: '80%',
-    marginBottom: 16,
   },
 });

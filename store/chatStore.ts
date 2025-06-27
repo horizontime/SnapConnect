@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '@/utils/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { Chat, Message, User } from '@/types';
-import { getSocket } from '@/utils/socket';
+import { getSocket, disconnectSocket } from '@/utils/socket';
 import {
   CHAT_SEND,
   CHAT_NEW,
@@ -29,6 +29,8 @@ type ChatState = {
   expireMessage: (chatId: string, messageId: string) => void;
   replayMessage: (chatId: string, messageId: string) => void;
   screenshotMessage: (chatId: string, messageId: string) => void;
+  initializeSocketListeners: () => Promise<void>;
+  cleanup: () => Promise<void>;
 };
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -284,49 +286,73 @@ export const useChatStore = create<ChatState>((set, get) => ({
     
     return { messages: updatedMessages };
   }),
+  
+  // New method to initialize socket listeners
+  initializeSocketListeners: async () => {
+    try {
+      const socket = await getSocket();
+
+      // Handle new messages from server
+      socket.on(CHAT_NEW, (msg: ChatNewPayload) => {
+        useChatStore.setState(state => {
+          const existing = state.messages[msg.chatId] || [];
+          const newMsg = { ...msg, senderId: msg.senderId.toString() };
+          const withoutTemp = existing.filter(m => !m.id.startsWith('temp-'));
+          return {
+            messages: {
+              ...state.messages,
+              [msg.chatId]: [...withoutTemp, newMsg],
+            },
+          };
+        });
+      });
+
+      // Handle read receipts
+      socket.on(CHAT_READ, ({ chatId, messageId }: ChatReadPayload) => {
+        useChatStore.setState(state => {
+          const updatedMsgs = (state.messages[chatId] || []).map(m => m.id === messageId ? { ...m, isRead: true } : m);
+          return { messages: { ...state.messages, [chatId]: updatedMsgs } };
+        });
+      });
+
+      // Handle typing indicator
+      socket.on(CHAT_TYPING, ({ chatId, isTyping }) => {
+        useChatStore.setState(state => ({
+          typingIndicators: { ...state.typingIndicators, [chatId]: isTyping },
+        }));
+      });
+
+      socket.on(PRESENCE_UPDATE, ({ userId, isOnline }: PresenceUpdatePayload) => {
+        useFriendStore.getState().setOnlineStatus(userId, isOnline);
+      });
+      
+      console.log('[ChatStore] Socket listeners initialized successfully');
+    } catch (err: any) {
+      console.error('[ChatStore] Failed to initialize socket listeners', err?.message);
+    }
+  },
+
+  cleanup: async () => {
+    try {
+      const socket = await getSocket();
+      socket.off(CHAT_NEW);
+      socket.off(CHAT_READ);
+      socket.off(CHAT_TYPING);
+      socket.off(PRESENCE_UPDATE);
+      console.log('[ChatStore] Socket listeners cleaned up successfully');
+    } catch (err: any) {
+      console.error('[ChatStore] Failed to clean up socket listeners', err?.message);
+    }
+    
+    // Disconnect socket
+    disconnectSocket();
+    
+    // Reset state
+    set({
+      chats: [],
+      messages: {},
+      typingIndicators: {},
+      currentChatId: null,
+    });
+  },
 }));
-
-// ---------------------------------------------
-// Socket.IO listeners – register once at module load
-// ---------------------------------------------
-(async () => {
-  try {
-    const socket = await getSocket();
-
-    // Handle new messages from server
-    socket.on(CHAT_NEW, (msg: ChatNewPayload) => {
-      useChatStore.setState(state => {
-        const existing = state.messages[msg.chatId] || [];
-        const newMsg = { ...msg, senderId: msg.senderId.toString() };
-        const withoutTemp = existing.filter(m => !m.id.startsWith('temp-'));
-        return {
-          messages: {
-            ...state.messages,
-            [msg.chatId]: [...withoutTemp, newMsg],
-          },
-        };
-      });
-    });
-
-    // Handle read receipts
-    socket.on(CHAT_READ, ({ chatId, messageId }: ChatReadPayload) => {
-      useChatStore.setState(state => {
-        const updatedMsgs = (state.messages[chatId] || []).map(m => m.id === messageId ? { ...m, isRead: true } : m);
-        return { messages: { ...state.messages, [chatId]: updatedMsgs } };
-      });
-    });
-
-    // Handle typing indicator
-    socket.on(CHAT_TYPING, ({ chatId, isTyping }) => {
-      useChatStore.setState(state => ({
-        typingIndicators: { ...state.typingIndicators, [chatId]: isTyping },
-      }));
-    });
-
-    socket.on(PRESENCE_UPDATE, ({ userId, isOnline }: PresenceUpdatePayload) => {
-      useFriendStore.getState().setOnlineStatus(userId, isOnline);
-    });
-  } catch (err: any) {
-    console.error('[ChatStore] Failed to initialize socket listeners', err?.message);
-  }
-})();

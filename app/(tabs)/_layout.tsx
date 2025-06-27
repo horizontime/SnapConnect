@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { Camera, MessageSquare, Users, User } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 import { TouchableOpacity, StyleSheet } from 'react-native';
@@ -9,6 +9,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function TabLayout() {
   const { isAuthenticated } = useAuthStore();
   const insets = useSafeAreaInsets();
+
+  // Redirect to welcome page if not authenticated
+  if (!isAuthenticated) {
+    return <Redirect href="/auth/welcome" />;
+  }
 
   return (
     <Tabs

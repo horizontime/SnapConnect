@@ -4,13 +4,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { colors } from "@/constants/colors";
-import * as NavigationBar from "expo-navigation-bar";
-import { Platform } from "react-native";
 import { ensureMediaBuckets, testSupabaseConnection } from "@/utils/supabase";
-
-export const unstable_settings = {
-  initialRouteName: "(tabs)",
-};
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -34,12 +28,6 @@ export default function RootLayout() {
   }, [loaded]);
 
   useEffect(() => {
-    // Set Android system navigation bar background color to light gray on app launch
-    if (Platform.OS === 'android') {
-      NavigationBar.setBackgroundColorAsync('#D3D3D3'); // Light gray
-      NavigationBar.setButtonStyleAsync('dark');
-    }
-    
     // Ensure media buckets exist
     ensureMediaBuckets().catch(console.error);
     
@@ -74,6 +62,7 @@ function RootLayoutNav() {
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/welcome" options={{ headerShown: false }} />
       <Stack.Screen name="auth/login" options={{ headerShown: true }} />
       <Stack.Screen name="auth/signup" options={{ headerShown: true }} />
       <Stack.Screen name="chat/[id]" options={{ headerShown: true }} />

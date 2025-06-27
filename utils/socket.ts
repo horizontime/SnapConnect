@@ -43,6 +43,16 @@ async function createSocket() {
 }
 
 export async function getSocket() {
-  if (socket) return socket;
-  return createSocket();
+  if (!socket) {
+    socket = await createSocket();
+  }
+  return socket;
+}
+
+export function disconnectSocket() {
+  if (socket && socket.connected) {
+    socket.disconnect();
+    socket = null;
+    console.log('[Socket] Disconnected and cleaned up');
+  }
 } 

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { useRouter } from 'expo-router';
 import { Stack } from 'expo-router';
 import { supabase } from '@/utils/supabase';
+import { useChatStore } from '@/store/chatStore';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -53,6 +54,8 @@ export default function SignupScreen() {
       });
 
       login(data.user!.id, username.trim(), displayName.trim(), 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80');
+      // Initialize socket listeners after successful signup
+      await useChatStore.getState().initializeSocketListeners();
       router.replace('/(tabs)');
       setIsLoading(false);
     })();
@@ -64,7 +67,7 @@ export default function SignupScreen() {
   
   return (
     <>
-      <Stack.Screen options={{ title: 'Sign Up', headerBackTitle: 'Back' }} />
+      <Stack.Screen options={{ title: 'Sign Up' }} />
       <View style={styles.container}>
         <View style={styles.logoContainer}>
           <Image

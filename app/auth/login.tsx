@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/utils/supabase';
 import { Stack } from 'expo-router';
+import { useChatStore } from '@/store/chatStore';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -47,6 +48,8 @@ export default function LoginScreen() {
 
       if (profile) {
         login(profile.id, profile.username, profile.display_name, profile.avatar_url);
+        // Initialize socket listeners after successful login
+        await useChatStore.getState().initializeSocketListeners();
         router.replace('/(tabs)');
       } else {
         // If profile row missing, create a minimal one
@@ -61,6 +64,8 @@ export default function LoginScreen() {
           favorite_projects: [],
         });
         login(data.user.id, username.trim(), username.trim(), '');
+        // Initialize socket listeners after successful login
+        await useChatStore.getState().initializeSocketListeners();
         router.replace('/(tabs)');
       }
 
@@ -74,7 +79,7 @@ export default function LoginScreen() {
   
   return (
     <>
-      <Stack.Screen options={{ title: 'Log In', headerBackTitle: 'Back' }} />
+      <Stack.Screen options={{ title: 'Log In' }} />
       <View style={styles.container}>
         <View style={styles.logoContainer}>
           <Image
