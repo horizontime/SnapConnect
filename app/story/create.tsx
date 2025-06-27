@@ -236,16 +236,16 @@ export default function CreateStoryScreen() {
             <Text style={styles.label}>Description</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="Tell us more about your story..."
+              placeholder="Set the scene, please elaborate."
               placeholderTextColor={colors.textLight}
               value={description}
               onChangeText={setDescription}
               multiline
               numberOfLines={4}
-              maxLength={200}
+              maxLength={20000}
               textAlignVertical="top"
             />
-            <Text style={styles.charCount}>{description.length}/200</Text>
+            <Text style={styles.charCount}>{description.length}/20000</Text>
           </View>
 
           <TouchableOpacity 
@@ -341,8 +341,8 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   textArea: {
-    minHeight: 100,
-    maxHeight: 150,
+    minHeight: 250,
+    maxHeight: 370,
   },
   charCount: {
     fontSize: 12,
