@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Platform, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Platform, ActivityIndicator, Image, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { supabase } from '@/utils/supabase';
@@ -38,6 +38,7 @@ export default function StoryScreen() {
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
   const [imageLoading, setImageLoading] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
   const progressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const storyDuration = 5000; // 5 seconds per story
   
@@ -132,6 +133,44 @@ export default function StoryScreen() {
     }, interval);
   };
   
+  const pauseProgress = () => {
+    if (progressInterval.current) {
+      clearInterval(progressInterval.current);
+      progressInterval.current = null;
+    }
+  };
+  
+  const resumeProgress = () => {
+    if (!progressInterval.current && story?.type === 'image' && progress < 100) {
+      const remainingTime = storyDuration * ((100 - progress) / 100);
+      const interval = 10;
+      const increment = (interval / remainingTime) * (100 - progress);
+      
+      progressInterval.current = setInterval(() => {
+        setProgress(prev => {
+          const newProgress = prev + increment;
+          
+          if (newProgress >= 100) {
+            clearInterval(progressInterval.current!);
+            handleClose();
+            return 100;
+          }
+          
+          return newProgress;
+        });
+      }, interval);
+    }
+  };
+  
+  const handleTap = () => {
+    setIsPaused(!isPaused);
+    if (isPaused) {
+      resumeProgress();
+    } else {
+      pauseProgress();
+    }
+  };
+  
   const handleClose = () => {
     router.back();
   };
@@ -203,33 +242,55 @@ export default function StoryScreen() {
           }}
         />
       ) : (
-        <VideoPlayer uri={story.media_url} onEnd={handleClose} />
+        <VideoPlayer uri={story.media_url} onEnd={handleClose} isPaused={isPaused} />
       )}
       
       {/* Caption/Title/Description overlay */}
       {(story.title || story.description || story.caption) && (
         <View style={styles.textOverlay}>
-          {story.title && <Text style={styles.title}>{story.title}</Text>}
-          {story.description && <Text style={styles.description}>{story.description}</Text>}
-          {story.caption && <Text style={styles.caption}>{story.caption}</Text>}
+          <ScrollView 
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={true}
+            bounces={true}
+          >
+            {story.title && <Text style={styles.title}>{story.title}</Text>}
+            {story.description && <Text style={styles.description}>{story.description}</Text>}
+            {story.caption && <Text style={styles.caption}>{story.caption}</Text>}
+          </ScrollView>
         </View>
       )}
       
-      {/* Tap area to close */}
+      {/* Tap area to pause/resume */}
       <TouchableOpacity 
         style={styles.tapArea} 
-        onPress={handleClose}
+        onPress={handleTap}
         activeOpacity={1}
       />
+      
+      {/* Paused indicator */}
+      {isPaused && (
+        <View style={styles.pausedIndicator}>
+          <Text style={styles.pausedText}>PAUSED</Text>
+        </View>
+      )}
     </View>
   );
 }
 
-function VideoPlayer({ uri, onEnd }: { uri: string; onEnd: () => void }) {
+function VideoPlayer({ uri, onEnd, isPaused }: { uri: string; onEnd: () => void; isPaused: boolean }) {
   const player = useVideoPlayer(uri, player => {
     player.play();
     // Videos will automatically stop when they end
   });
+  
+  useEffect(() => {
+    if (isPaused) {
+      player.pause();
+    } else {
+      player.play();
+    }
+  }, [isPaused, player]);
   
   // For story videos, we can use a timer based on typical video duration
   // or let the user tap to close
@@ -325,35 +386,61 @@ const styles = StyleSheet.create({
   },
   textOverlay: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 60, // Raised to avoid Android navigation buttons
     left: 16,
     right: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: 12,
+    maxHeight: height / 3, // Maximum height is 1/3 of screen
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // More translucent
+    borderRadius: 20, // Rounded corners on all sides
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
     padding: 16,
+    paddingBottom: 20, // Extra padding at the bottom for better scrolling
   },
   title: {
     color: colors.card,
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 8,
   },
   description: {
     color: colors.card,
-    fontSize: 14,
-    marginBottom: 8,
+    fontSize: 15,
+    marginBottom: 12,
     opacity: 0.9,
+    lineHeight: 22,
   },
   caption: {
     color: colors.card,
     fontSize: 16,
+    fontStyle: 'italic',
+    opacity: 0.8,
+    lineHeight: 22,
   },
   tapArea: {
     position: 'absolute',
     top: 100,
-    bottom: 100,
+    bottom: height / 3 + 80, // Adjusted for new text overlay position
     left: 0,
     right: 0,
+  },
+  pausedIndicator: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -40 }, { translateY: -20 }],
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  pausedText: {
+    color: colors.card,
+    fontSize: 14,
+    fontWeight: '600',
   },
   errorText: {
     color: colors.textLight,
