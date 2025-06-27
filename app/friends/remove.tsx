@@ -17,7 +17,7 @@ import { supabase } from '@/utils/supabase';
 import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
-import { Check, X } from 'lucide-react-native';
+import { Check } from 'lucide-react-native';
 import { User } from '@/types';
 
 // Debug function to check friends table RLS status
@@ -211,15 +211,6 @@ export default function RemoveFriendsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <X size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Remove Friends</Text>
-        <View style={styles.placeholder} />
-      </View>
-
       {/* Selected count */}
       {selectedFriends.length > 0 && (
         <View style={styles.selectedBar}>
@@ -264,28 +255,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 16,
-    backgroundColor: colors.background,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.card,
-  },
-  backButton: {
-    padding: 8,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  placeholder: {
-    width: 40,
   },
   selectedBar: {
     backgroundColor: colors.primary,
