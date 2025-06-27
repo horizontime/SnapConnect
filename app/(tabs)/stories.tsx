@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { StoryThumbnail } from '@/components/story/StoryThumbnail';
 import StoryCard from '@/components/story/StoryCard';
 import { Plus } from 'lucide-react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function StoriesScreen() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function StoriesScreen() {
     (s.userId !== userId && s.user_id !== userId) && !s.user?.isFriend
   ) : allStories;
   
+  // Initial fetch and realtime subscription
   useEffect(() => {
     fetchStories(userId ?? undefined);
     if (userId) {
@@ -33,6 +35,13 @@ export default function StoriesScreen() {
       });
     }
   }, [userId]);
+  
+  // Refresh stories whenever the tab is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchStories(userId ?? undefined);
+    }, [userId])
+  );
   
   const navigateToStory = (storyId: string) => {
     router.push(`/story/${storyId}`);
