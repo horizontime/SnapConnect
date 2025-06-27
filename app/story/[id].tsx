@@ -9,6 +9,7 @@ import { formatStoryTimestamp } from '@/utils/timeUtils';
 import { X } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import * as NavigationBar from 'expo-navigation-bar';
 
 const { width, height } = Dimensions.get('window');
 
@@ -51,6 +52,22 @@ export default function StoryScreen() {
       }
     };
   }, [id]);
+  
+  useEffect(() => {
+    // Set light navigation buttons for dark story background
+    if (Platform.OS === 'android') {
+      NavigationBar.setButtonStyleAsync('light').catch(console.error);
+      NavigationBar.setBackgroundColorAsync('#000000').catch(console.error);
+    }
+    
+    // Revert to dark buttons when component unmounts
+    return () => {
+      if (Platform.OS === 'android') {
+        NavigationBar.setButtonStyleAsync('dark').catch(console.error);
+        NavigationBar.setBackgroundColorAsync('#FFFFFF').catch(console.error);
+      }
+    };
+  }, []);
   
   const fetchStory = async () => {
     if (!id) return;

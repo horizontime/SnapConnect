@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Image, StyleSheet, TouchableOpacity, Text, BackHandler, ActivityIndicator } from 'react-native';
+import { View, Image, StyleSheet, TouchableOpacity, Text, BackHandler, ActivityIndicator, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { supabase } from '@/utils/supabase';
 import { useAuthStore } from '@/store/authStore';
@@ -7,6 +7,7 @@ import { useSnapStore } from '@/store/snapStore';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import OverlayItem from '@/components/snap-editor/OverlayItem';
 import { colors } from '@/constants/colors';
+import * as NavigationBar from 'expo-navigation-bar';
 
 export default function SnapViewer() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -49,6 +50,21 @@ export default function SnapViewer() {
 
     return () => backHandler.remove();
   }, [handleClose]);
+  
+  // Configure navigation bar for dark background
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setButtonStyleAsync('light').catch(console.error);
+      NavigationBar.setBackgroundColorAsync('#000000').catch(console.error);
+    }
+    
+    return () => {
+      if (Platform.OS === 'android') {
+        NavigationBar.setButtonStyleAsync('dark').catch(console.error);
+        NavigationBar.setBackgroundColorAsync('#FFFFFF').catch(console.error);
+      }
+    };
+  }, []);
 
   if (loading) {
     return (

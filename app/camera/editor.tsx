@@ -1,16 +1,17 @@
-import React from 'react';
-import { View, Image, StyleSheet, useWindowDimensions } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Image, StyleSheet, useWindowDimensions, Text, TouchableOpacity, Alert, Platform } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import ViewShot from 'react-native-view-shot';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import OverlayItem, { OverlayData } from '@/components/snap-editor/OverlayItem';
 import { nanoid } from 'nanoid/non-secure';
-import { TouchableOpacity, Text } from 'react-native';
 import { Type, Smile } from 'lucide-react-native';
 import { useAuthStore } from '@/store/authStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system';
+import * as NavigationBar from 'expo-navigation-bar';
+import { colors } from '@/constants/colors';
 
 export default function SnapEditorScreen() {
   const { mediaUri, mediaType } = useLocalSearchParams<{
@@ -32,6 +33,21 @@ export default function SnapEditorScreen() {
     console.log('Editor received mediaUri:', mediaUri);
     console.log('Editor received mediaType:', mediaType);
   }, [mediaUri, mediaType]);
+  
+  // Configure navigation bar for dark background
+  React.useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setButtonStyleAsync('light').catch(console.error);
+      NavigationBar.setBackgroundColorAsync('#000000').catch(console.error);
+    }
+    
+    return () => {
+      if (Platform.OS === 'android') {
+        NavigationBar.setButtonStyleAsync('dark').catch(console.error);
+        NavigationBar.setBackgroundColorAsync('#FFFFFF').catch(console.error);
+      }
+    };
+  }, []);
 
   if (!mediaUri) {
     console.log('No mediaUri provided to editor');

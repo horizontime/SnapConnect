@@ -1,10 +1,12 @@
+import React, { useEffect } from 'react';
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
 import { colors } from "@/constants/colors";
 import { ensureMediaBuckets, testSupabaseConnection } from "@/utils/supabase";
+import * as NavigationBar from 'expo-navigation-bar';
+import { Platform } from 'react-native';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -28,6 +30,13 @@ export default function RootLayout() {
   }, [loaded]);
 
   useEffect(() => {
+    // Configure Android navigation bar
+    if (Platform.OS === 'android') {
+      NavigationBar.setButtonStyleAsync('dark').catch(console.error);
+      // Optionally set the background color to ensure visibility
+      NavigationBar.setBackgroundColorAsync('#FFFFFF').catch(console.error);
+    }
+    
     // Ensure media buckets exist
     ensureMediaBuckets().catch(console.error);
     

@@ -10,6 +10,7 @@ import { mockFilters } from '@/constants/mockData';
 import { X } from 'lucide-react-native';
 import { useIsFocused } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system';
+import * as NavigationBar from 'expo-navigation-bar';
 
 export default function CameraScreen() {
   const router = useRouter();
@@ -30,6 +31,22 @@ export default function CameraScreen() {
   
   // Track focus state to control camera rendering
   const isFocused = useIsFocused();
+
+  useEffect(() => {
+    if (isFocused && Platform.OS === 'android') {
+      // Set dark buttons for camera background
+      NavigationBar.setButtonStyleAsync('dark').catch(console.error);
+      NavigationBar.setBackgroundColorAsync('#000000').catch(console.error);
+    }
+    
+    // Revert to default dark buttons when leaving
+    return () => {
+      if (Platform.OS === 'android') {
+        NavigationBar.setButtonStyleAsync('dark').catch(console.error);
+        NavigationBar.setBackgroundColorAsync('#FFFFFF').catch(console.error);
+      }
+    };
+  }, [isFocused]);
 
   // Clear camera ref when screen loses focus to avoid using stale reference
   useEffect(() => {
