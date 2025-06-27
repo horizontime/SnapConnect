@@ -204,6 +204,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   scanButton: {
+    display: 'none', // Hide the scan QR code button
     position: 'absolute',
     bottom: 32,
     alignSelf: 'center',

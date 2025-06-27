@@ -9,6 +9,7 @@ import {
   ActivityIndicator 
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { useFriendStore } from '@/store/friendStore';
 import { useStoryStore } from '@/store/storyStore';
@@ -47,6 +48,7 @@ async function checkFriendsTableStatus() {
 
 export default function RemoveFriendsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { userId } = useAuthStore();
   const { friends, fetchFriends, removeFriend } = useFriendStore();
   const { fetchStories } = useStoryStore();
@@ -236,7 +238,7 @@ export default function RemoveFriendsScreen() {
 
       {/* Remove button */}
       {selectedFriends.length > 0 && (
-        <View style={styles.bottomBar}>
+        <View style={[styles.bottomBar, { paddingBottom: 16 + insets.bottom }]}>
           <Button
             title={isRemoving ? 'Removing...' : 'Remove Selected'}
             variant="primary"
