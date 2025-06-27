@@ -1,47 +1,111 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Platform } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useStoryStore } from '@/store/storyStore';
-import { useFriendStore } from '@/store/friendStore';
-import { Image } from 'expo-image';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Platform, ActivityIndicator, Image } from 'react-native';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { useAuthStore } from '@/store/authStore';
+import { supabase } from '@/utils/supabase';
 import { colors } from '@/constants/colors';
 import { Avatar } from '@/components/ui/Avatar';
 import { formatStoryTimestamp } from '@/utils/timeUtils';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useVideoPlayer, VideoView } from 'expo-video';
 
 const { width, height } = Dimensions.get('window');
+
+interface Story {
+  id: string;
+  user_id: string;
+  media_url: string;
+  type: 'image' | 'video';
+  caption?: string;
+  title?: string;
+  description?: string;
+  created_at: string;
+  user?: {
+    id: string;
+    username: string;
+    display_name?: string;
+    avatar_url?: string;
+  };
+}
 
 export default function StoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { getStoriesWithUserData, setCurrentStory, markStoryAsViewed, currentStoryId, currentStoryItemIndex } = useStoryStore();
-  const { getFriendById } = useFriendStore();
+  const { userId } = useAuthStore();
   
+  const [story, setStory] = useState<Story | null>(null);
+  const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
-  const progressInterval = useRef<NodeJS.Timeout | null>(null);
+  const [imageLoading, setImageLoading] = useState(true);
+  const progressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const storyDuration = 5000; // 5 seconds per story
   
-  const storiesWithUserData = getStoriesWithUserData();
-  const story = storiesWithUserData.find(s => s.id === id);
-  const storyItems = story?.items || [];
-  const currentItem = storyItems[currentStoryItemIndex];
-  const user = story?.user;
-  
   useEffect(() => {
-    if (id) {
-      setCurrentStory(id, 0);
-      markStoryAsViewed(id);
-      startProgress();
-    }
+    fetchStory();
     
     return () => {
       if (progressInterval.current) {
         clearInterval(progressInterval.current);
       }
-      setCurrentStory(null);
     };
   }, [id]);
+  
+  const fetchStory = async () => {
+    if (!id) return;
+    
+    try {
+      console.log('[StoryViewer] Fetching story:', id);
+      
+      // Fetch story with user info
+      const { data, error } = await supabase
+        .from('stories')
+        .select(`
+          *,
+          user:profiles!user_id (
+            id,
+            username,
+            display_name,
+            avatar_url
+          )
+        `)
+        .eq('id', id)
+        .single();
+        
+      if (error) {
+        console.error('[StoryViewer] Error fetching story:', error);
+        setLoading(false);
+        return;
+      }
+      
+      console.log('[StoryViewer] Story data:', data);
+      setStory(data);
+      setLoading(false);
+      
+      // Mark as viewed if not the current user's story
+      if (userId && data.user_id !== userId) {
+        await markAsViewed(id, userId);
+      }
+      
+      // Start progress timer for images (videos handle their own duration)
+      if (data.type === 'image') {
+        startProgress();
+      }
+    } catch (err) {
+      console.error('[StoryViewer] Error:', err);
+      setLoading(false);
+    }
+  };
+  
+  const markAsViewed = async (storyId: string, viewerId: string) => {
+    try {
+      await supabase
+        .from('story_views')
+        .insert({ story_id: storyId, viewer_id: viewerId });
+    } catch (err) {
+      console.error('[StoryViewer] Error marking as viewed:', err);
+    }
+  };
   
   const startProgress = () => {
     setProgress(0);
@@ -59,8 +123,8 @@ export default function StoryScreen() {
         
         if (newProgress >= 100) {
           clearInterval(progressInterval.current!);
-          handleNext();
-          return 0;
+          handleClose();
+          return 100;
         }
         
         return newProgress;
@@ -68,61 +132,49 @@ export default function StoryScreen() {
     }, interval);
   };
   
-  const handlePrevious = () => {
-    if (currentStoryItemIndex > 0) {
-      setCurrentStory(id, currentStoryItemIndex - 1);
-      startProgress();
-    } else {
-      // Go to previous story or close
-      router.back();
-    }
-  };
-  
-  const handleNext = () => {
-    if (currentStoryItemIndex < storyItems.length - 1) {
-      setCurrentStory(id, currentStoryItemIndex + 1);
-      startProgress();
-    } else {
-      // Go to next story or close
-      router.back();
-    }
-  };
-  
   const handleClose = () => {
     router.back();
   };
   
-  if (!story || !currentItem) {
-    return null;
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+  
+  if (!story) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <Text style={styles.errorText}>Story not found</Text>
+      </View>
+    );
   }
   
   return (
     <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
       <StatusBar style="light" />
       
+      {/* Progress bar */}
       <View style={styles.progressContainer}>
-        {storyItems.map((_, index) => (
-          <View key={index} style={styles.progressBarContainer}>
-            <View 
-              style={[
-                styles.progressBar, 
-                index === currentStoryItemIndex 
-                  ? { width: `${progress}%` } 
-                  : index < currentStoryItemIndex 
-                    ? { width: '100%' } 
-                    : { width: '0%' }
-              ]} 
-            />
-          </View>
-        ))}
+        <View style={styles.progressBarContainer}>
+          <View style={[styles.progressBar, { width: `${progress}%` }]} />
+        </View>
       </View>
       
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.userInfo}>
-          <Avatar source={user?.avatar || ''} size={36} />
+          <Avatar source={story.user?.avatar_url || ''} size={36} />
           <View style={styles.userTextContainer}>
-            <Text style={styles.username}>{user?.displayName || 'User'}</Text>
-            <Text style={styles.timestamp}>{formatStoryTimestamp(currentItem.timestamp)}</Text>
+            <Text style={styles.username}>
+              {story.user?.display_name || story.user?.username || 'User'}
+            </Text>
+            <Text style={styles.timestamp}>
+              {formatStoryTimestamp(story.created_at)}
+            </Text>
           </View>
         </View>
         
@@ -131,34 +183,68 @@ export default function StoryScreen() {
         </TouchableOpacity>
       </View>
       
-      <Image
-        source={{ uri: currentItem.url }}
-        style={styles.image}
-        contentFit="cover"
-      />
-      
-      {currentItem.caption && (
-        <View style={styles.captionContainer}>
-          <Text style={styles.caption}>{currentItem.caption}</Text>
+      {/* Media content */}
+      {imageLoading && story.type === 'image' && (
+        <View style={[styles.loadingContainer, StyleSheet.absoluteFill]}>
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       )}
       
-      <TouchableOpacity 
-        style={styles.previousArea} 
-        onPress={handlePrevious}
-        activeOpacity={1}
-      >
-        <ChevronLeft size={36} color="rgba(255, 255, 255, 0.5)" style={styles.navIcon} />
-      </TouchableOpacity>
+      {story.type === 'image' ? (
+        <Image
+          source={{ uri: story.media_url }}
+          style={styles.media}
+          resizeMode="contain"
+          onLoadStart={() => setImageLoading(true)}
+          onLoadEnd={() => setImageLoading(false)}
+          onError={(e) => {
+            console.error('[StoryViewer] Image load error:', e.nativeEvent.error);
+            setImageLoading(false);
+          }}
+        />
+      ) : (
+        <VideoPlayer uri={story.media_url} onEnd={handleClose} />
+      )}
       
+      {/* Caption/Title/Description overlay */}
+      {(story.title || story.description || story.caption) && (
+        <View style={styles.textOverlay}>
+          {story.title && <Text style={styles.title}>{story.title}</Text>}
+          {story.description && <Text style={styles.description}>{story.description}</Text>}
+          {story.caption && <Text style={styles.caption}>{story.caption}</Text>}
+        </View>
+      )}
+      
+      {/* Tap area to close */}
       <TouchableOpacity 
-        style={styles.nextArea} 
-        onPress={handleNext}
+        style={styles.tapArea} 
+        onPress={handleClose}
         activeOpacity={1}
-      >
-        <ChevronRight size={36} color="rgba(255, 255, 255, 0.5)" style={styles.navIcon} />
-      </TouchableOpacity>
+      />
     </View>
+  );
+}
+
+function VideoPlayer({ uri, onEnd }: { uri: string; onEnd: () => void }) {
+  const player = useVideoPlayer(uri, player => {
+    player.play();
+    // Videos will automatically stop when they end
+  });
+  
+  // For story videos, we can use a timer based on typical video duration
+  // or let the user tap to close
+  useEffect(() => {
+    // Auto-close after 15 seconds (max story duration)
+    const timer = setTimeout(onEnd, 15000);
+    return () => clearTimeout(timer);
+  }, [onEnd]);
+  
+  return (
+    <VideoView
+      style={styles.media}
+      player={player}
+      contentFit="contain"
+    />
   );
 }
 
@@ -167,16 +253,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   progressContainer: {
-    flexDirection: 'row',
     paddingHorizontal: 8,
     paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
   },
   progressBarContainer: {
-    flex: 1,
     height: 2,
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    marginHorizontal: 2,
     borderRadius: 1,
     overflow: 'hidden',
   },
@@ -189,7 +281,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 12,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
   },
   userInfo: {
     flexDirection: 'row',
@@ -202,53 +300,63 @@ const styles = StyleSheet.create({
     color: colors.card,
     fontSize: 16,
     fontWeight: '600',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   timestamp: {
     color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 12,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   closeButton: {
     padding: 4,
   },
-  image: {
-    position: 'absolute',
+  media: {
     width,
     height,
-    zIndex: -1,
   },
-  captionContainer: {
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  textOverlay: {
     position: 'absolute',
     bottom: 80,
     left: 16,
     right: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: 12,
     padding: 16,
+  },
+  title: {
+    color: colors.card,
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  description: {
+    color: colors.card,
+    fontSize: 14,
+    marginBottom: 8,
+    opacity: 0.9,
   },
   caption: {
     color: colors.card,
     fontSize: 16,
   },
-  previousArea: {
+  tapArea: {
     position: 'absolute',
-    top: 0,
+    top: 100,
+    bottom: 100,
     left: 0,
-    width: '30%',
-    height: '100%',
-    justifyContent: 'center',
-    paddingLeft: 8,
-  },
-  nextArea: {
-    position: 'absolute',
-    top: 0,
     right: 0,
-    width: '70%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    paddingRight: 8,
   },
-  navIcon: {
-    opacity: 0,
+  errorText: {
+    color: colors.textLight,
+    fontSize: 16,
   },
 });

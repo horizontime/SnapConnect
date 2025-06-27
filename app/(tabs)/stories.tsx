@@ -208,10 +208,11 @@ const styles = StyleSheet.create({
   },
   addStoryButton: {
     width: 72,
-    height: 72,
+    height: 90,
     marginHorizontal: 4,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 6,
   },
   addIconContainer: {
     width: 60,
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
   addStoryText: {
     fontSize: 12,
     color: colors.primary,
-    marginTop: 4,
+    marginTop: 6,
     fontWeight: '600',
   },
   gridContainer: {

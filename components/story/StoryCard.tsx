@@ -47,7 +47,7 @@ const StoryCard: React.FC<Props> = ({ id, username, avatar, previewUrl, hasStory
       
       <View style={styles.gradient} />
       <View style={styles.overlay}>
-        <StoryRing source={avatar} size={40} hasStory={hasStory} isViewed={isViewed} />
+        <StoryRing source={avatar} size={32} hasStory={hasStory} isViewed={isViewed} />
         <Text style={styles.name} numberOfLines={1}>{username}</Text>
       </View>
       {(title || description) && (
@@ -62,16 +62,18 @@ const StoryCard: React.FC<Props> = ({ id, username, avatar, previewUrl, hasStory
 
 // Calculate card size based on screen width
 const { width: screenWidth } = Dimensions.get('window');
-const PADDING = 16; // Total horizontal padding
+const GRID_PADDING = 8 * 2; // gridContainer has paddingHorizontal: 8
 const GAP = 8; // Gap between cards
 const COLUMNS = 2; // Number of columns on mobile
-const CARD_SIZE = (screenWidth - PADDING - (GAP * (COLUMNS - 1))) / COLUMNS;
+const AVAILABLE_WIDTH = screenWidth - GRID_PADDING;
+const CARD_SIZE = (AVAILABLE_WIDTH - GAP) / COLUMNS;
 
 const styles = StyleSheet.create({
   container: {
-    width: CARD_SIZE,
-    height: CARD_SIZE,
-    margin: GAP / 2,
+    width: CARD_SIZE - 4,
+    height: CARD_SIZE - 4,
+    marginBottom: GAP,
+    marginHorizontal: 2,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: colors.border,
@@ -93,7 +95,7 @@ const styles = StyleSheet.create({
   },
   name: {
     color: colors.card,
-    fontSize: 12,
+    fontSize: 11,
     marginTop: 2,
     fontWeight: '500',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
@@ -108,7 +110,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.card,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     marginBottom: 2,
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
@@ -117,7 +119,7 @@ const styles = StyleSheet.create({
   },
   description: {
     color: colors.card,
-    fontSize: 12,
+    fontSize: 11,
     opacity: 0.9,
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 0, height: 1 },
