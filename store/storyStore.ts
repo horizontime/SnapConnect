@@ -16,6 +16,7 @@ type StoryState = {
   getAllStories: () => any[];
   fetchStories: (userId?: string) => Promise<void>;
   subscribeToRealtime: (userId: string) => void;
+  deleteStory: (storyId: string) => Promise<boolean>;
 };
 
 export const useStoryStore = create<StoryState>((set, get) => ({
@@ -91,6 +92,31 @@ export const useStoryStore = create<StoryState>((set, get) => ({
   
   getAllStories: () => {
     return get().stories;
+  },
+  
+  deleteStory: async (storyId: string) => {
+    try {
+      // Delete from Supabase
+      const { error } = await supabase
+        .from('stories')
+        .delete()
+        .eq('id', storyId);
+        
+      if (error) {
+        console.error('[StoryStore] Failed to delete story', error.message);
+        throw error;
+      }
+      
+      // Update local state
+      set(state => ({
+        stories: state.stories.filter(s => s.id !== storyId)
+      }));
+      
+      return true;
+    } catch (error) {
+      console.error('[StoryStore] Delete story error:', error);
+      return false;
+    }
   },
   
   // Fetch stories from Supabase (replaces mock data when available)
