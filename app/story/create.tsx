@@ -249,7 +249,11 @@ export default function CreateStoryScreen() {
           </View>
 
           <TouchableOpacity 
-            style={[styles.postButton, isLoading && styles.postButtonDisabled]}
+            style={[
+              styles.postButton, 
+              isLoading && styles.postButtonDisabled,
+              { marginBottom: 20 + insets.bottom }
+            ]}
             onPress={handlePost}
             disabled={isLoading}
           >
