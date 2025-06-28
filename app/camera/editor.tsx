@@ -8,10 +8,11 @@ import OverlayItem, { OverlayData } from '@/components/snap-editor/OverlayItem';
 import TextEditor from '@/components/snap-editor/TextEditor';
 import EmojiPicker from '@/components/snap-editor/EmojiPicker';
 import { nanoid } from 'nanoid/non-secure';
-import { Type, Smile } from 'lucide-react-native';
+import { Type, Smile, Download, Send, Plus } from 'lucide-react-native';
 import { useAuthStore } from '@/store/authStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system';
+import * as MediaLibrary from 'expo-media-library';
 import * as NavigationBar from 'expo-navigation-bar';
 import { colors } from '@/constants/colors';
 
@@ -185,6 +186,67 @@ export default function SnapEditorScreen() {
     }
   };
 
+  const handleSaveToDevice = async () => {
+    try {
+      // Request permissions
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please allow access to your photo library to save media.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      let uriToSave: string;
+
+      if (mediaType === 'image') {
+        // For images, capture the view with overlays
+        const tempUri = await viewShotRef.current?.capture?.();
+        
+        if (!tempUri) {
+          throw new Error('Failed to capture image');
+        }
+
+        // Save to media library
+        const asset = await MediaLibrary.createAssetAsync(tempUri);
+        
+        // Create album if it doesn't exist
+        const album = await MediaLibrary.getAlbumAsync('Gauntlet');
+        if (album === null) {
+          await MediaLibrary.createAlbumAsync('Gauntlet', asset, false);
+        } else {
+          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+        }
+
+        Alert.alert('Success', 'Image saved to your gallery!', [{ text: 'OK' }]);
+      } else {
+        // For videos, save the original video
+        // Note: Overlays won't be preserved in the saved video
+        const asset = await MediaLibrary.createAssetAsync(mediaUri as string);
+        
+        // Create album if it doesn't exist
+        const album = await MediaLibrary.getAlbumAsync('Gauntlet');
+        if (album === null) {
+          await MediaLibrary.createAlbumAsync('Gauntlet', asset, false);
+        } else {
+          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+        }
+
+        Alert.alert(
+          'Success', 
+          'Video saved to your gallery!\n\nNote: Overlays are not included in saved videos.', 
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Failed to save media:', error);
+      Alert.alert('Error', 'Failed to save media. Please try again.', [{ text: 'OK' }]);
+    }
+  };
+
   const handlePostStory = async () => {
     if (!userId) return;
 
@@ -265,26 +327,36 @@ export default function SnapEditorScreen() {
 
       {/* Toolbar */}
       <View style={[
-        styles.toolbar,
+        styles.toolbarContainer,
         {
-          paddingBottom: 12 + insets.bottom, // ensure content sits above system nav bar
-          bottom: insets.bottom, // lift the toolbar when a bottom inset is present
+          paddingBottom: insets.bottom, // ensure content sits above system nav bar
         },
       ]}>
-        <TouchableOpacity style={styles.toolButton} onPress={addCaption}>
-          <Type color="#fff" size={24} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.toolButton} onPress={showEmojis}>
-          <Smile color="#fff" size={24} />
-        </TouchableOpacity>
+        {/* Top row - editing tools */}
+        <View style={styles.editingToolsRow}>
+          <TouchableOpacity style={styles.toolButton} onPress={addCaption}>
+            <Type color="#fff" size={24} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.toolButton} onPress={showEmojis}>
+            <Smile color="#fff" size={24} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.toolButton} onPress={handleSaveToDevice}>
+            <Download color="#fff" size={24} />
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity style={[styles.toolButton, styles.storyButton]} onPress={handlePostStory}>
-          <Text style={{ color: '#fff', fontWeight: '600' }}>For Stories</Text>
-        </TouchableOpacity>
+        {/* Bottom row - action buttons */}
+        <View style={styles.actionButtonsRow}>
+          <TouchableOpacity style={styles.storyButton} onPress={handlePostStory}>
+            <Plus color="#fff" size={20} />
+            <Text style={styles.buttonText}>Story</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.toolButton, styles.continueButton]} onPress={handleContinue}>
-          <Text style={{ color: '#fff', fontWeight: '600' }}>Send To</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.sendButton} onPress={handleContinue}>
+            <Send color="#fff" size={20} />
+            <Text style={styles.buttonText}>Send</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {showTextEditor && (
@@ -323,28 +395,74 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  toolbar: {
+  toolbarContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 12,
     backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingTop: 12,
+  },
+  editingToolsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 20,
+    paddingBottom: 12,
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    paddingBottom: 12,
+    paddingHorizontal: 20,
   },
   toolButton: {
     padding: 12,
-  },
-  continueButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   storyButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#34C759',
-    borderRadius: 8,
-    paddingHorizontal: 16,
+    borderRadius: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  sendButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#007AFF',
+    borderRadius: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
