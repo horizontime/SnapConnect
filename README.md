@@ -2,15 +2,6 @@
 
 > A RAG-Enhanced Social App for Woodworking Enthusiasts – Combining ephemeral messaging with AI-powered content discovery
 
-<div align="center">
-  <img src="assets/images/icon.png" alt="SnapConnect Logo" width="120" height="120" />
-  
-  [![React Native](https://img.shields.io/badge/React%20Native-0.79.4-blue.svg)](https://reactnative.dev/)
-  [![Expo](https://img.shields.io/badge/Expo-53.0.12-black.svg)](https://expo.dev/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5.8.3-blue.svg)](https://www.typescriptlang.org/)
-  [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-</div>
-
 ## 📱 Overview
 
 SnapConnect is a social media application designed specifically for the woodworking community. It combines the ephemeral messaging features of Snapchat with specialized tools and content discovery for woodworking enthusiasts. The app features disappearing messages, stories, AR filters for wood projects, and AI-powered content recommendations.
@@ -79,20 +70,17 @@ Before you begin, ensure you have the following installed:
 
 ### Development Mode
 
-1. **Start the development server with tunnel**
+1. **Start the server**
+   ```bash
+   cd server
+   bun run dev
+   ```
+
+2. **Start the client in another terminal**
    ```bash
    bun run start
    ```
 
-2. **For web development**
-   ```bash
-   bun run start-web
-   ```
-
-3. **For web development with debug logs**
-   ```bash
-   bun run start-web-dev
-   ```
 
 ### Testing on Mobile
 
@@ -100,77 +88,113 @@ Before you begin, ensure you have the following installed:
 2. Open the **Expo Go** app on your mobile device
 3. Scan the QR code to load the app
 
-### Testing on Web
 
-1. Run `bun run start-web`
-2. Press `w` in the terminal or navigate to the URL shown
-3. The app will open in your default web browser
 
 ## 📁 Project Structure
 
 ```
 SnapConnect/
-├── app/                    # Expo Router screens and navigation
-│   ├── _layout.tsx        # Root layout with navigation setup
-│   ├── index.tsx          # Entry point with auth redirect
-│   ├── modal.tsx          # Modal screen template
-│   ├── +not-found.tsx     # 404 error page
-│   ├── (tabs)/            # Tab-based navigation screens
-│   │   ├── _layout.tsx    # Tab navigator configuration
-│   │   ├── index.tsx      # Chat list (default tab)
-│   │   ├── camera.tsx     # Camera screen
-│   │   ├── stories.tsx    # Stories feed
-│   │   └── profile.tsx    # User profile
-│   ├── auth/              # Authentication screens
-│   │   ├── login.tsx      # Login screen
-│   │   └── signup.tsx     # Sign up screen
-│   ├── chat/              # Chat-related screens
-│   │   └── [id].tsx       # Individual chat screen
-│   ├── friends/           # Friend management screens
-│   │   ├── add.tsx        # Add friends screen
-│   │   └── scan.tsx       # QR code scanner
-│   ├── profile/           # Profile-related screens
-│   │   └── shoptag.tsx    # ShopTag QR code display
-│   └── story/             # Story viewer
-│       └── [id].tsx       # Individual story viewer
-├── assets/                # Static assets
-│   └── images/           # App images
+├── app/
+│   ├── _layout.tsx
+│   ├── +not-found.tsx
+│   ├── index.tsx
+│   ├── modal.tsx
+│   ├── (tabs)/
+│   │   ├── _layout.tsx
+│   │   ├── index.tsx
+│   │   ├── camera.tsx
+│   │   ├── stories.tsx
+│   │   └── profile.tsx
+│   ├── auth/
+│   │   ├── login.tsx
+│   │   ├── signup.tsx
+│   │   └── welcome.tsx
+│   ├── camera/
+│   │   └── editor.tsx
+│   ├── chat/
+│   │   └── [id].tsx
+│   ├── friends/
+│   │   ├── add.tsx
+│   │   ├── remove.tsx
+│   │   └── scan.tsx
+│   ├── profile/
+│   │   └── shoptag.tsx
+│   ├── snaps/
+│   │   └── [id].tsx
+│   └── story/
+│       ├── [id].tsx
+│       └── create.tsx
+├── components/
+│   ├── ui/
+│   │   ├── Avatar.tsx
+│   │   ├── Button.tsx
+│   │   └── StoryRing.tsx
+│   ├── camera/
+│   │   ├── CameraControls.tsx
+│   │   ├── FilterSelector.tsx
+│   │   └── RecordingProgressRing.tsx
+│   ├── chat/
+│   │   └── ChatListItem.tsx
+│   ├── friend/
+│   │   ├── FriendListItem.tsx
+│   │   └── FriendProfileModal.tsx
+│   ├── snap/
+│   │   └── SnapListItem.tsx
+│   ├── snap-editor/
+│   │   └── OverlayItem.tsx
+│   └── story/
+│       ├── StoryCard.tsx
+│       └── StoryThumbnail.tsx
+├── constants/
+│   ├── colors.ts
+│   ├── mockData.ts
+│   └── socket.ts
+├── store/
+│   ├── authStore.ts
+│   ├── chatStore.ts
+│   ├── friendStore.ts
+│   ├── snapStore.ts
+│   └── storyStore.ts
+├── types/
+│   └── index.ts
+├── utils/
+│   ├── debug.ts
+│   ├── fixFriendships.ts
+│   ├── socket.ts
+│   ├── supabase.ts
+│   ├── sync.ts
+│   ├── timeUtils.ts
+│   └── upload.ts
+├── supabase/
+│   ├── edge-functions/
+│   │   ├── generate_preference_embedding/
+│   │   ├── generate_story_embedding/
+│   │   └── purge_expired_content/
+│   │       └── index.ts
+│   ├── migrations/
+│   │   ├── 0001_create_snaps_stories_tables.sql
+│   │   ├── 0002_rls_snaps_stories.sql
+│   │   ├── 0003_storage_rls_policies.sql
+│   │   ├── 0004_add_profile_preferences.sql
+│   │   ├── 0005_add_story_title_description.sql
+│   │   └── 0006_create_friends_table.sql
+│   └── supabase-schema.json
+├── assets/
+│   └── images/
 │       ├── adaptive-icon.png
 │       ├── favicon.png
 │       ├── icon.png
 │       └── splash-icon.png
-├── components/            # Reusable React components
-│   ├── ui/               # Generic UI components
-│   │   ├── Avatar.tsx    # User avatar component
-│   │   ├── Button.tsx    # Reusable button component
-│   │   └── StoryRing.tsx # Story status ring
-│   ├── chat/             # Chat-specific components
-│   │   └── ChatListItem.tsx
-│   ├── camera/           # Camera-related components
-│   │   ├── CameraControls.tsx
-│   │   └── FilterSelector.tsx
-│   ├── friend/           # Friend-related components
-│   │   └── FriendListItem.tsx
-│   └── story/            # Story-specific components
-│       └── StoryThumbnail.tsx
-├── constants/            # App constants and configuration
-│   ├── colors.ts         # Color palette
-│   └── mockData.ts       # Development mock data
-├── store/                # Zustand state management
-│   ├── authStore.ts      # Authentication state
-│   ├── chatStore.ts      # Chat and messages state
-│   ├── friendStore.ts    # Friends and contacts state
-│   └── storyStore.ts     # Stories state
-├── types/                # TypeScript type definitions
-│   └── index.ts          # Centralized type exports
-├── utils/                # Utility functions
-│   ├── supabase.ts       # Supabase client configuration
-│   └── timeUtils.ts      # Time formatting utilities
-├── app.json              # Expo configuration
-├── babel.config.js       # Babel configuration
-├── bun.lock              # Bun lockfile
-├── package.json          # Project dependencies and scripts
-└── README.md             # Project documentation
+├── server/
+│   ├── index.js
+│   └── package.json
+├── scripts/
+├── app.config.js
+├── babel.config.js
+├── bun.lock
+├── package.json
+├── tsconfig.json
+└── README.md
 ```
 
 ## 🎨 Design System
@@ -198,15 +222,6 @@ For detailed troubleshooting, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 
 ## Development
 
-### Project Structure
-```
-v5-rork/
-├── app/              # Expo Router screens
-├── components/       # Reusable UI components
-├── store/           # Zustand state management
-├── utils/           # Utilities and configurations
-└── assets/          # Images and fonts
-```
 
 ### Key Technologies
 - React Native with Expo
@@ -217,14 +232,3 @@ v5-rork/
 - Expo Image Picker for photos
 - NativeWind for styling
 
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License.
