@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Pressable } from 'react-native';
-import { Image, Images } from 'lucide-react-native';
+import { Image, Images, RefreshCw } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 import RecordingProgressRing from './RecordingProgressRing';
 
@@ -34,6 +34,7 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.controlButton} onPress={onFlip}>
+          <RefreshCw size={24} color={colors.card} />
           <Text style={styles.controlText}>Flip</Text>
         </TouchableOpacity>
         
