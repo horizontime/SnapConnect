@@ -337,6 +337,15 @@ export default function CameraScreen() {
         <X size={24} color={colors.card} />
       </TouchableOpacity>
 
+      {showFilters && (
+        <TouchableOpacity 
+          style={styles.closeFiltersButton} 
+          onPress={() => setShowFilters(false)}
+        >
+          <X size={24} color={colors.card} />
+        </TouchableOpacity>
+      )}
+
       {showFilters ? (
         <View style={styles.filtersContainer}>
           <FilterSelector
@@ -398,6 +407,12 @@ const styles = StyleSheet.create({
     top: Platform.OS === 'ios' ? 60 : 40,
     left: 20,
     zIndex: 10,
+  },
+  closeFiltersButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    left: 20,
+    zIndex: 11,
   },
   filtersContainer: {
     position: 'absolute',
