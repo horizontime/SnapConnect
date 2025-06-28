@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Pressable } from 'react-native';
-import { Image } from 'lucide-react-native';
+import { Image, Images } from 'lucide-react-native';
 import { colors } from '@/constants/colors';
 import RecordingProgressRing from './RecordingProgressRing';
 
@@ -10,6 +10,7 @@ interface CameraControlsProps {
   onStopRecording: () => void;
   onFlip: () => void;
   onFilterToggle: () => void;
+  onGalleryPick: () => void;
   isRecording: boolean;
   recordingProgress?: number;
 }
@@ -20,12 +21,18 @@ export const CameraControls: React.FC<CameraControlsProps> = ({
   onStopRecording,
   onFlip,
   onFilterToggle,
+  onGalleryPick,
   isRecording,
   recordingProgress = 0,
 }) => {
   return (
     <View style={styles.container}>
       <View style={styles.topControls}>
+        <TouchableOpacity style={styles.controlButton} onPress={onGalleryPick}>
+          <Images size={24} color={colors.card} />
+          <Text style={styles.controlText}>Gallery</Text>
+        </TouchableOpacity>
+        
         <TouchableOpacity style={styles.controlButton} onPress={onFlip}>
           <Text style={styles.controlText}>Flip</Text>
         </TouchableOpacity>

@@ -11,6 +11,7 @@ import { X } from 'lucide-react-native';
 import { useIsFocused } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system';
 import * as NavigationBar from 'expo-navigation-bar';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function CameraScreen() {
   const router = useRouter();
@@ -263,6 +264,56 @@ export default function CameraScreen() {
     router.back();
   };
   
+  const handleGalleryPick = async () => {
+    try {
+      // Launch the image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        allowsEditing: false,
+        quality: 0.9,
+      });
+      
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        
+        // Copy to a permanent location to avoid file being deleted
+        const fileName = asset.type === 'video' 
+          ? `snap_${Date.now()}.mp4` 
+          : `snap_${Date.now()}.jpg`;
+        const permanentUri = `${FileSystem.documentDirectory}${fileName}`;
+        
+        try {
+          await FileSystem.copyAsync({
+            from: asset.uri,
+            to: permanentUri
+          });
+          
+          // Navigate to Snap Editor with the media
+          router.push({
+            pathname: '/camera/editor' as any,
+            params: {
+              mediaUri: permanentUri,
+              mediaType: asset.type === 'video' ? 'video' : 'image',
+            },
+          });
+        } catch (copyError) {
+          console.error('Failed to copy media:', copyError);
+          // Fallback to original URI
+          router.push({
+            pathname: '/camera/editor' as any,
+            params: {
+              mediaUri: asset.uri,
+              mediaType: asset.type === 'video' ? 'video' : 'image',
+            },
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to pick image from gallery:', error);
+      Alert.alert('Error', 'Failed to pick media from gallery');
+    }
+  };
+  
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
@@ -301,6 +352,7 @@ export default function CameraScreen() {
           onStopRecording={handleStopRecording}
           onFlip={handleFlip}
           onFilterToggle={handleFilterToggle}
+          onGalleryPick={handleGalleryPick}
           isRecording={isRecording}
           recordingProgress={recordingProgress}
         />
