@@ -37,6 +37,8 @@ const TEXT_COLORS = [
 
 const FONT_SIZES = [12, 16, 20, 24, 28, 32, 36, 40, 48, 56, 64];
 
+const BEIGE_COLOR = '#D4C4A8'; // Light beige color for selections
+
 export default function TextEditor({
   visible,
   initialText = '',
@@ -113,7 +115,12 @@ export default function TextEditor({
                     ]}
                     onPress={() => setSelectedFontFamily(font.value)}
                   >
-                    <Text style={styles.fontOptionText}>{font.name}</Text>
+                    <Text style={[
+                      styles.fontOptionText,
+                      selectedFontFamily === font.value && styles.selectedText,
+                    ]}>
+                      {font.name}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -131,7 +138,12 @@ export default function TextEditor({
                     ]}
                     onPress={() => setSelectedFontSize(size)}
                   >
-                    <Text style={styles.sizeOptionText}>{size}</Text>
+                    <Text style={[
+                      styles.sizeOptionText,
+                      selectedFontSize === size && styles.selectedText,
+                    ]}>
+                      {size}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -229,7 +241,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   selectedOption: {
-    backgroundColor: colors.primary,
+    backgroundColor: BEIGE_COLOR,
+  },
+  selectedText: {
+    color: '#000',
   },
   colorGrid: {
     flexDirection: 'row',

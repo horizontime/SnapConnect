@@ -17,7 +17,13 @@ interface EmojiPickerProps {
   onClose: () => void;
 }
 
+const BEIGE_COLOR = '#D4C4A8'; // Light beige color for selections
+
 const EMOJI_CATEGORIES = {
+  woodworking: {
+    name: 'Woodworking',
+    emojis: ['🪵', '🔨', '🪚', '🪛', '🔧', '🧰', '👷', '👷‍♂️', '👷‍♀️', '🪓', '📐', '📏', '⚒️', '🛠️', '🔩', '⚙️', '🪜', '🧱', '🪑', '🛋️', '🚪', '🪟', '🏗️', '🏠', '🌲', '🌳', '⛏️', '🗜️', '📦', '✏️', '📋', '🥽', '🦺', '🧤', '👔', '🥾', '⚡', '💡', '🔥', '💪', '🏆', '⭐', '✨', '🎨', '🖌️', '🖍️', '✂️', '📌', '📍', '🗂️', '📁', '📊', '📈', '💰', '💵', '🤝', '👍', '💯', '🎉', '🎊', '🏅', '🥇', '🌟', '🔑', '🏡', '🏘️', '🏭', '🏢', '🏛️', '⚠️', '🚧', '🔐', '🔒', '🔓', '🗝️', '🛡️', '🎯'],
+  },
   smileys: {
     name: 'Smileys',
     emojis: ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠'],
@@ -53,7 +59,7 @@ const EMOJI_CATEGORIES = {
 };
 
 export default function EmojiPicker({ visible, onSelectEmoji, onClose }: EmojiPickerProps) {
-  const [selectedCategory, setSelectedCategory] = useState('smileys');
+  const [selectedCategory, setSelectedCategory] = useState('woodworking');
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
@@ -76,15 +82,20 @@ export default function EmojiPicker({ visible, onSelectEmoji, onClose }: EmojiPi
                 ]}
                 onPress={() => setSelectedCategory(key)}
               >
-                <Text style={styles.categoryText}>{category.name}</Text>
+                <Text style={[
+                  styles.categoryText,
+                  selectedCategory === key && styles.selectedCategoryText,
+                ]}>
+                  {category.name}
+                </Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
 
           <ScrollView style={styles.emojiScroll} contentContainerStyle={styles.emojiGrid}>
-            {EMOJI_CATEGORIES[selectedCategory as keyof typeof EMOJI_CATEGORIES].emojis.map((emoji) => (
+            {EMOJI_CATEGORIES[selectedCategory as keyof typeof EMOJI_CATEGORIES].emojis.map((emoji, index) => (
               <TouchableOpacity
-                key={emoji}
+                key={`${selectedCategory}-${emoji}-${index}`}
                 style={styles.emojiButton}
                 onPress={() => {
                   onSelectEmoji(emoji);
@@ -134,12 +145,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   selectedCategory: {
-    backgroundColor: colors.primary,
+    backgroundColor: BEIGE_COLOR,
   },
   categoryText: {
     color: colors.text,
     fontSize: 14,
     fontWeight: '500',
+  },
+  selectedCategoryText: {
+    color: '#000',
   },
   emojiScroll: {
     flex: 1,
