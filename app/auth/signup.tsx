@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { Stack } from 'expo-router';
 import { supabase } from '@/utils/supabase';
 import { useChatStore } from '@/store/chatStore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -56,7 +57,13 @@ export default function SignupScreen() {
       login(data.user!.id, username.trim(), displayName.trim(), 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80');
       // Initialize socket listeners after successful signup
       await useChatStore.getState().initializeSocketListeners();
-      router.replace('/(tabs)');
+
+      const onboardingHidden = await AsyncStorage.getItem('onboardingHidden');
+      if (onboardingHidden === 'true') {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/onboarding' as any);
+      }
       setIsLoading(false);
     })();
   };
