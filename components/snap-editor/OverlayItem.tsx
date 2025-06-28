@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Image, Text, TouchableOpacity, Alert, View, StyleSheet } from 'react-native';
+import { Image, Text, TouchableOpacity, Alert, View, StyleSheet, Platform } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -134,13 +134,26 @@ const OverlayItem: React.FC<OverlayItemProps> = ({ data, onUpdate, onDelete, onE
     scale.value = withTiming(data.scale);
   }, [data]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-      { scale: scale.value },
-    ],
-  }));
+  const animatedStyle = useAnimatedStyle(() => {
+    if (Platform.OS === 'web') {
+      // On web the hit-box follows CSS transforms, so we can keep translateX/Y.
+      return {
+        transform: [
+          { translateX: translateX.value },
+          { translateY: translateY.value },
+          { scale: scale.value },
+        ],
+      } as const;
+    }
+
+    // On native (iOS/Android) the touch target does NOT move with transforms, so
+    // we use absolute positioning for X/Y and only transform for scaling.
+    return {
+      left: translateX.value,
+      top: translateY.value,
+      transform: [{ scale: scale.value }],
+    } as const;
+  });
 
   const getTextStyle = () => {
     const baseStyle = {
