@@ -36,6 +36,14 @@ export default function CameraScreen() {
   // Track focus state to control camera rendering
   const isFocused = useIsFocused();
 
+  // Stop recording if camera mode changes
+  useEffect(() => {
+    if (isRecording && cameraMode === 'picture') {
+      console.log('[Camera] Stopping recording due to mode change');
+      handleCapture();
+    }
+  }, [cameraMode]);
+
   useEffect(() => {
     if (isFocused && Platform.OS === 'android') {
       // Set dark buttons for camera background
@@ -165,127 +173,109 @@ export default function CameraScreen() {
         Alert.alert('Error', 'Failed to take picture');
       }
     } else {
-      // Toggle video recording
+      // Video mode - toggle recording
       if (!isRecording) {
-        await startRecording();
-      } else {
-        stopRecording();
-      }
-    }
-  };
-  
-  const startRecording = async () => {
-    if (!cameraRef.current || isRecording || recordingRef.current) return;
-    
-    try {
-      console.log('[Camera] Starting recording...');
-      setIsRecording(true);
-      setRecordingProgress(0);
-      recordingStartTime.current = Date.now();
-      
-      // Start progress interval
-      progressInterval.current = setInterval(() => {
-        const elapsed = Date.now() - recordingStartTime.current;
-        const progress = Math.min(elapsed / 15000, 1); // 15 seconds max
-        setRecordingProgress(progress);
-        
-        // Auto-stop at max duration
-        if (progress >= 1) {
-          stopRecording();
-        }
-      }, 100);
-      
-      // Start recording
-      const videoPromise = cameraRef.current.recordAsync({
-        maxDuration: 15, // 15 seconds max
-      });
-      
-      recordingRef.current = videoPromise;
-      
-      // Handle the result when recording completes
-      videoPromise.then((video: any) => {
-        console.log('[Camera] Recording completed:', video);
-        if (video && video.uri) {
-          // Copy to permanent location
-          const fileName = `snap_${Date.now()}.mp4`;
-          const permanentUri = `${FileSystem.documentDirectory}${fileName}`;
-          
-          FileSystem.copyAsync({
-            from: video.uri,
-            to: permanentUri
-          }).then(() => {
-            // Navigate to editor with video
-            router.push({
-              pathname: '/camera/editor' as any,
-              params: {
-                mediaUri: permanentUri,
-                mediaType: 'video',
-              },
-            });
-          }).catch((copyError) => {
-            console.error('Failed to copy video:', copyError);
-            // Fallback to original URI
-            router.push({
-              pathname: '/camera/editor' as any,
-              params: {
-                mediaUri: video.uri,
-                mediaType: 'video',
-              },
-            });
-          });
-        }
-      }).catch((error: any) => {
-        // Only log errors that aren't user cancellations
-        if (error.message && !error.message.includes('stopped before any data')) {
-          console.error('Recording error:', error);
-          Alert.alert('Error', 'Failed to record video');
-        }
-      }).finally(() => {
-        // Clean up recording state
-        setIsRecording(false);
-        recordingRef.current = null;
-        if (progressInterval.current) {
-          clearInterval(progressInterval.current);
-          progressInterval.current = null;
-        }
+        // Start recording
+        console.log('[Camera] Starting video recording...');
+        setIsRecording(true);
         setRecordingProgress(0);
-      });
-    } catch (error) {
-      console.error('Failed to start recording:', error);
-      Alert.alert('Error', 'Failed to start recording');
-      setIsRecording(false);
-      recordingRef.current = null;
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current);
-        progressInterval.current = null;
-      }
-      setRecordingProgress(0);
-    }
-  };
-  
-  const stopRecording = () => {
-    if (!cameraRef.current || !isRecording || !recordingRef.current) return;
-    
-    console.log('[Camera] Stopping recording...');
-    
-    // Ensure minimum recording duration
-    const elapsed = Date.now() - recordingStartTime.current;
-    const MIN_DURATION = 1000; // 1 second minimum
-    
-    if (elapsed < MIN_DURATION) {
-      // Delay stop to meet minimum duration
-      setTimeout(() => {
-        try {
+        recordingStartTime.current = Date.now();
+        
+        // Start progress interval
+        progressInterval.current = setInterval(() => {
+          const elapsed = Date.now() - recordingStartTime.current;
+          const progress = Math.min(elapsed / 15000, 1); // 15 seconds max
+          setRecordingProgress(progress);
+          
+          // Auto-stop at max duration
+          if (progress >= 1) {
+            handleCapture(); // Call this function again to stop
+          }
+        }, 100);
+        
+        // Start recording in background (don't await)
+        cameraRef.current.recordAsync({
+          maxDuration: 15,
+        }).then(async (video: any) => {
+          console.log('[Camera] Video recording completed:', video);
+          
+          // Clean up state first
+          setIsRecording(false);
+          recordingRef.current = null;
+          if (progressInterval.current) {
+            clearInterval(progressInterval.current);
+            progressInterval.current = null;
+          }
+          setRecordingProgress(0);
+          
+          if (video && video.uri) {
+            // Small delay to ensure clean state
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Copy to permanent location
+            const fileName = `snap_${Date.now()}.mp4`;
+            const permanentUri = `${FileSystem.documentDirectory}${fileName}`;
+            
+            try {
+              await FileSystem.copyAsync({
+                from: video.uri,
+                to: permanentUri
+              });
+              
+              console.log('[Camera] Navigating to editor with video:', permanentUri);
+              
+              // Navigate to editor
+              router.push({
+                pathname: '/camera/editor' as any,
+                params: {
+                  mediaUri: permanentUri,
+                  mediaType: 'video',
+                },
+              });
+            } catch (copyError) {
+              console.error('Failed to copy video:', copyError);
+              // Fallback
+              router.push({
+                pathname: '/camera/editor' as any,
+                params: {
+                  mediaUri: video.uri,
+                  mediaType: 'video',
+                },
+              });
+            }
+          }
+        }).catch((error: any) => {
+          console.error('[Camera] Recording error:', error);
+          
+          // Clean up state
+          setIsRecording(false);
+          recordingRef.current = null;
+          if (progressInterval.current) {
+            clearInterval(progressInterval.current);
+            progressInterval.current = null;
+          }
+          setRecordingProgress(0);
+          
+          if (!error.message?.includes('stopped before any data')) {
+            Alert.alert('Error', 'Failed to record video');
+          }
+        });
+        
+        // Store the promise reference so we can check it later
+        recordingRef.current = true; // Just use as a flag
+      } else {
+        // Stop recording
+        console.log('[Camera] Stopping video recording...');
+        const elapsed = Date.now() - recordingStartTime.current;
+        
+        if (elapsed < 1000) {
+          // Too short, wait a bit
+          setTimeout(() => {
+            cameraRef.current?.stopRecording();
+          }, 1000 - elapsed);
+        } else {
           cameraRef.current?.stopRecording();
-        } catch (err) {
-          console.warn('[Camera] Failed to stop recording:', err);
         }
-      }, MIN_DURATION - elapsed);
-    } else {
-      try {
-        cameraRef.current?.stopRecording();
-      } catch (err) {
-        console.warn('[Camera] Failed to stop recording:', err);
       }
     }
   };
@@ -365,6 +355,8 @@ export default function CameraScreen() {
           ref={cameraRef}
           style={StyleSheet.absoluteFill}
           facing={facing}
+          mode={cameraMode === 'video' ? 'video' : 'picture'}
+          videoQuality="1080p"
         />
       )}
 
