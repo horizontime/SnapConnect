@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Image, Text, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Image, Text, TouchableOpacity, Alert, View, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -8,6 +8,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import type { ImageSourcePropType } from 'react-native';
+import { X } from 'lucide-react-native';
 
 export type OverlayData = {
   id: string;
@@ -34,6 +35,8 @@ const OverlayItem: React.FC<OverlayItemProps> = ({ data, onUpdate, onDelete, onE
   const translateX = useSharedValue(data.x);
   const translateY = useSharedValue(data.y);
   const scale = useSharedValue(data.scale);
+  const [showDeleteButton, setShowDeleteButton] = useState(false);
+  const [isSelected, setIsSelected] = useState(false);
 
   // Sync back to parent when gesture ends
   const updateParent = () => {
@@ -42,14 +45,7 @@ const OverlayItem: React.FC<OverlayItemProps> = ({ data, onUpdate, onDelete, onE
 
   const handleDelete = () => {
     if (onDelete) {
-      Alert.alert(
-        'Delete Item',
-        'Are you sure you want to delete this item?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: () => onDelete(data.id) }
-        ]
-      );
+      onDelete(data.id);
     }
   };
 
@@ -59,31 +55,52 @@ const OverlayItem: React.FC<OverlayItemProps> = ({ data, onUpdate, onDelete, onE
     }
   };
 
+  const showDeleteOption = () => {
+    setShowDeleteButton(true);
+    setIsSelected(true);
+  };
+
+  const hideDeleteOption = () => {
+    setShowDeleteButton(false);
+    setIsSelected(false);
+  };
+
   const pan = Gesture.Pan()
     .onBegin(() => {
-      // store start positions in gesture context implicitly via closures
+      runOnJS(hideDeleteOption)();
+      runOnJS(() => setIsSelected(true))();
     })
     .onUpdate(e => {
       translateX.value = data.x + e.translationX;
       translateY.value = data.y + e.translationY;
     })
     .onEnd(() => {
+      data.x = translateX.value;
+      data.y = translateY.value;
       updateParent();
-    });
+      runOnJS(() => setIsSelected(false))();
+    })
+    .shouldCancelWhenOutside(false)
+    .minDistance(0);
 
   const pinch = Gesture.Pinch()
+    .onBegin(() => {
+      runOnJS(() => setIsSelected(true))();
+    })
     .onUpdate(e => {
       scale.value = Math.max(0.3, Math.min(data.scale * e.scale, 4));
     })
     .onEnd(() => {
+      data.scale = scale.value;
       updateParent();
+      runOnJS(() => setIsSelected(false))();
     });
 
   const longPress = Gesture.LongPress()
-    .minDuration(800)
+    .minDuration(500)
     .onEnd(() => {
       if (editable && onDelete) {
-        runOnJS(handleDelete)();
+        runOnJS(showDeleteOption)();
       }
     });
 
@@ -95,7 +112,20 @@ const OverlayItem: React.FC<OverlayItemProps> = ({ data, onUpdate, onDelete, onE
       }
     });
 
-  const composed = Gesture.Simultaneous(pan, pinch, longPress, doubleTap);
+  const tap = Gesture.Tap()
+    .numberOfTaps(1)
+    .onEnd(() => {
+      if (showDeleteButton) {
+        runOnJS(hideDeleteOption)();
+      }
+    });
+
+  const composed = Gesture.Race(
+    Gesture.Simultaneous(pan, pinch),
+    longPress,
+    doubleTap,
+    tap
+  );
 
   useEffect(() => {
     // update when parent changes (not occurs often)
@@ -138,20 +168,60 @@ const OverlayItem: React.FC<OverlayItemProps> = ({ data, onUpdate, onDelete, onE
   return (
     <GestureDetector gesture={editable ? composed : Gesture.Pan()}>
       <Animated.View style={[{ position: 'absolute' }, animatedStyle]}>
-        {data.type === 'sticker' && data.source ? (
-          <Image source={data.source} style={{ width: 100, height: 100 }} resizeMode="contain" />
-        ) : data.type === 'emoji' ? (
-          <Text style={{ fontSize: 64 }}>
-            {data.text || '😀'}
-          </Text>
-        ) : (
-          <Text style={getTextStyle()}>
-            {data.text || 'Text'}
-          </Text>
+        <View style={isSelected ? styles.selectedContainer : undefined}>
+          {data.type === 'sticker' && data.source ? (
+            <Image source={data.source} style={{ width: 100, height: 100 }} resizeMode="contain" />
+          ) : data.type === 'emoji' ? (
+            <Text style={{ fontSize: 64 }}>
+              {data.text || '😀'}
+            </Text>
+          ) : (
+            <Text style={getTextStyle()}>
+              {data.text || 'Text'}
+            </Text>
+          )}
+        </View>
+        
+        {showDeleteButton && (
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleDelete}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <View style={styles.deleteButtonBackground}>
+              <X size={16} color="#fff" />
+            </View>
+          </TouchableOpacity>
         )}
       </Animated.View>
     </GestureDetector>
   );
 };
+
+const styles = StyleSheet.create({
+  selectedContainer: {
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    padding: 4,
+  },
+  deleteButton: {
+    position: 'absolute',
+    top: -10,
+    right: -10,
+    zIndex: 1000,
+  },
+  deleteButtonBackground: {
+    backgroundColor: 'rgba(255, 0, 0, 0.8)',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+});
 
 export default OverlayItem; 
