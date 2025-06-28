@@ -5,6 +5,8 @@ import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import ViewShot from 'react-native-view-shot';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import OverlayItem, { OverlayData } from '@/components/snap-editor/OverlayItem';
+import TextEditor from '@/components/snap-editor/TextEditor';
+import EmojiPicker from '@/components/snap-editor/EmojiPicker';
 import { nanoid } from 'nanoid/non-secure';
 import { Type, Smile } from 'lucide-react-native';
 import { useAuthStore } from '@/store/authStore';
@@ -23,6 +25,9 @@ export default function SnapEditorScreen() {
   const { width, height } = useWindowDimensions();
 
   const [overlays, setOverlays] = React.useState<OverlayData[]>([]);
+  const [showTextEditor, setShowTextEditor] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [editingOverlay, setEditingOverlay] = useState<OverlayData | null>(null);
   const viewShotRef = React.useRef<ViewShot>(null);
 
   // Safe area for bottom navigation / gesture bar
@@ -55,15 +60,33 @@ export default function SnapEditorScreen() {
   }
 
   const addCaption = () => {
-    const newOverlay: OverlayData = {
-      id: nanoid(),
-      type: 'caption',
-      text: 'Caption',
-      x: width / 2 - 50, // Center horizontally (approximate text width)
-      y: height / 2 - 20, // Center vertically (approximate text height)
-      scale: 1,
-    };
-    setOverlays(prev => [...prev, newOverlay]);
+    setEditingOverlay(null);
+    setShowTextEditor(true);
+  };
+
+  const handleTextSave = (text: string, color: string, fontSize: number, fontFamily: string) => {
+    if (editingOverlay) {
+      // Update existing caption
+      setOverlays(prev => prev.map(o => 
+        o.id === editingOverlay.id 
+          ? { ...o, text, color, fontSize, fontFamily }
+          : o
+      ));
+    } else {
+      // Create new caption
+      const newOverlay: OverlayData = {
+        id: nanoid(),
+        type: 'caption',
+        text,
+        color,
+        fontSize,
+        fontFamily,
+        x: width / 2 - 100, // Center horizontally (approximate)
+        y: height / 2 - 50, // Center vertically (approximate)
+        scale: 1,
+      };
+      setOverlays(prev => [...prev, newOverlay]);
+    }
   };
 
   const addSticker = () => {
@@ -78,8 +101,35 @@ export default function SnapEditorScreen() {
     setOverlays(prev => [...prev, newOverlay]);
   };
 
+  const showEmojis = () => {
+    setShowEmojiPicker(true);
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    const newOverlay: OverlayData = {
+      id: nanoid(),
+      type: 'emoji',
+      text: emoji,
+      x: width / 2 - 32, // Center horizontally (emoji is ~64px at default scale)
+      y: height / 2 - 32, // Center vertically
+      scale: 1,
+    };
+    setOverlays(prev => [...prev, newOverlay]);
+  };
+
   const updateOverlay = (updated: OverlayData) => {
     setOverlays(prev => prev.map(o => (o.id === updated.id ? updated : o)));
+  };
+
+  const deleteOverlay = (id: string) => {
+    setOverlays(prev => prev.filter(o => o.id !== id));
+  };
+
+  const editTextOverlay = (overlay: OverlayData) => {
+    if (overlay.type === 'caption') {
+      setEditingOverlay(overlay);
+      setShowTextEditor(true);
+    }
   };
 
   const handleContinue = async () => {
@@ -203,7 +253,13 @@ export default function SnapEditorScreen() {
         )}
 
         {overlays.map((ov) => (
-          <OverlayItem key={ov.id} data={ov} onUpdate={updateOverlay} />
+          <OverlayItem 
+            key={ov.id} 
+            data={ov} 
+            onUpdate={updateOverlay}
+            onDelete={deleteOverlay}
+            onEdit={editTextOverlay}
+          />
         ))}
       </ViewShot>
 
@@ -218,7 +274,7 @@ export default function SnapEditorScreen() {
         <TouchableOpacity style={styles.toolButton} onPress={addCaption}>
           <Type color="#fff" size={24} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.toolButton} onPress={addSticker}>
+        <TouchableOpacity style={styles.toolButton} onPress={showEmojis}>
           <Smile color="#fff" size={24} />
         </TouchableOpacity>
 
@@ -230,6 +286,29 @@ export default function SnapEditorScreen() {
           <Text style={{ color: '#fff', fontWeight: '600' }}>Send To</Text>
         </TouchableOpacity>
       </View>
+
+      {showTextEditor && (
+        <TextEditor
+          visible={showTextEditor}
+          initialText={editingOverlay?.text}
+          initialColor={editingOverlay?.color}
+          initialFontSize={editingOverlay?.fontSize}
+          initialFontFamily={editingOverlay?.fontFamily}
+          onClose={() => {
+            setShowTextEditor(false);
+            setEditingOverlay(null);
+          }}
+          onSave={handleTextSave}
+        />
+      )}
+
+      {showEmojiPicker && (
+        <EmojiPicker
+          visible={showEmojiPicker}
+          onClose={() => setShowEmojiPicker(false)}
+          onSelectEmoji={handleEmojiSelect}
+        />
+      )}
     </GestureHandlerRootView>
   );
 }
