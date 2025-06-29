@@ -12,7 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 export default function StoriesScreen() {
   const router = useRouter();
   const { userId, avatar: userAvatar } = useAuthStore();
-  const { getAllStories, fetchStories } = useStoryStore();
+  const { getAllStories, fetchStories, fetchRecommendedStories, recommendedStories } = useStoryStore();
   
   // Get all stories and categorize them
   const allStories = getAllStories();
@@ -26,9 +26,14 @@ export default function StoriesScreen() {
   const friendsStories = userId ? allStories.filter((s: any) => 
     (s.userId !== userId && s.user_id !== userId) && s.user?.isFriend
   ) : [];
-  const otherStories = userId ? allStories.filter((s: any) => 
-    (s.userId !== userId && s.user_id !== userId) && !s.user?.isFriend
-  ) : allStories;
+  
+  // Use recommended stories if available, otherwise fall back to regular other stories
+  const hasRecommendations = recommendedStories && recommendedStories.length > 0;
+  const otherStories = hasRecommendations 
+    ? recommendedStories 
+    : (userId ? allStories.filter((s: any) => 
+        (s.userId !== userId && s.user_id !== userId) && !s.user?.isFriend
+      ) : allStories);
   
   // Debug logging for each category
   console.log('[StoriesScreen] My stories:', myStories.length);
@@ -49,6 +54,9 @@ export default function StoriesScreen() {
   useEffect(() => {
     fetchStories(userId ?? undefined);
     if (userId) {
+      // Fetch recommended stories based on user preferences
+      fetchRecommendedStories(userId);
+      
       import('@/store/storyStore').then(({ useStoryStore }) => {
         useStoryStore.getState().subscribeToRealtime(userId);
       });
@@ -59,6 +67,9 @@ export default function StoriesScreen() {
   useFocusEffect(
     React.useCallback(() => {
       fetchStories(userId ?? undefined);
+      if (userId) {
+        fetchRecommendedStories(userId);
+      }
     }, [userId])
   );
   
@@ -141,7 +152,9 @@ export default function StoriesScreen() {
 
       {/* Recommended Stories Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recommended</Text>
+        <Text style={styles.sectionTitle}>
+          {hasRecommendations ? 'Recommended for You' : 'Discover Stories'}
+        </Text>
         {otherStories.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No stories to show</Text>

@@ -1,9 +1,11 @@
 import { create } from 'zustand';
 import { supabase } from '@/utils/supabase';
+import { fetchStoriesBySimilarity } from '@/utils/userPreferences';
 import { Story, StoryItem, User } from '@/types';
 
 type StoryState = {
   stories: Story[];
+  recommendedStories: any[];
   currentStoryId: string | null;
   currentStoryItemIndex: number;
   setCurrentStory: (storyId: string | null, itemIndex?: number) => void;
@@ -14,12 +16,14 @@ type StoryState = {
   getFriendsStories: (userId: string) => (Story & { user: User })[];
   getAllStories: () => any[];
   fetchStories: (userId?: string) => Promise<void>;
+  fetchRecommendedStories: (userId: string) => Promise<void>;
   subscribeToRealtime: (userId: string) => void;
   deleteStory: (storyId: string) => Promise<boolean>;
 };
 
 export const useStoryStore = create<StoryState>((set, get) => ({
   stories: [],
+  recommendedStories: [],
   currentStoryId: null,
   currentStoryItemIndex: 0,
   
@@ -108,6 +112,28 @@ export const useStoryStore = create<StoryState>((set, get) => ({
     }
   },
   
+  // Fetch recommended stories by similarity
+  fetchRecommendedStories: async (userId: string) => {
+    try {
+      console.log('[StoryStore] Fetching recommended stories for user:', userId);
+      const recommendedStories = await fetchStoriesBySimilarity(userId, 20);
+      
+      // Map to ensure required fields exist
+      const mappedStories = recommendedStories.map((s: any) => ({
+        ...s,
+        userId: s.user_id,
+        lastUpdated: s.lastUpdated || s.created_at || new Date().toISOString(),
+        items: [], // Stories in new structure don't have items
+      }));
+      
+      set({ recommendedStories: mappedStories });
+      console.log('[StoryStore] Loaded', mappedStories.length, 'recommended stories');
+    } catch (error) {
+      console.error('[StoryStore] Failed to fetch recommended stories:', error);
+      set({ recommendedStories: [] });
+    }
+  },
+
   // Fetch stories from Supabase (replaces mock data when available)
   fetchStories: async (userId) => {
     const { data, error } = await supabase

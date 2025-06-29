@@ -11,6 +11,7 @@ import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '@/utils/supabase';
 import { useChatStore } from '@/store/chatStore';
+import { updateUserPreferenceEmbedding } from '@/utils/userPreferences';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -430,6 +431,28 @@ export default function ProfileScreen() {
     if (!userId || !profileLoaded) return;
     updateProfileField({ favorite_projects: favoriteProjects });
   }, [favoriteProjects, updateProfileField, userId, profileLoaded]);
+
+  // Update preference embedding when any preferences change
+  React.useEffect(() => {
+    if (!userId || !profileLoaded) return;
+    
+    // Debounce the embedding update to avoid excessive API calls
+    const timeoutId = setTimeout(() => {
+      console.log('[Profile] Updating preference embedding...');
+      updateUserPreferenceEmbedding(
+        userId,
+        favoriteWoods,
+        favoriteTools,
+        favoriteProjects
+      ).then(success => {
+        if (success) {
+          console.log('[Profile] Preference embedding updated successfully');
+        }
+      });
+    }, 2000); // Wait 2 seconds after last change
+    
+    return () => clearTimeout(timeoutId);
+  }, [favoriteWoods, favoriteTools, favoriteProjects, userId, profileLoaded]);
 
   const handleStartEditAbout = () => {
     // Backup current about value so we can restore on cancel

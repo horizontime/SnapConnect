@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
+import { generateStoryEmbedding } from './embeddings';
 
 // Ensure you have these two variables defined in your .env or app.config.js
 import Constants from 'expo-constants';
@@ -272,6 +273,14 @@ export async function createStory(params: {
 
   const expires_at = new Date(Date.now() + expiresInHours * 3600 * 1000).toISOString();
 
+  // Generate embedding for the story if title or description is provided
+  console.log('[createStory] Generating embedding for story...');
+  const embedding = await generateStoryEmbedding(title ?? null, description ?? null);
+  
+  if (!embedding && (title || description)) {
+    console.warn('[createStory] Failed to generate embedding, proceeding without it');
+  }
+
   const insertData = {
     user_id: userId,
     media_url: mediaUrl,
@@ -281,10 +290,14 @@ export async function createStory(params: {
     metadata: metadata ?? null,
     title: title ?? null,
     description: description ?? null,
+    embedding: embedding ?? null,
     expires_at,
   };
 
-  console.log('[createStory] Inserting story with data:', insertData);
+  console.log('[createStory] Inserting story with data:', {
+    ...insertData,
+    embedding: embedding ? '[vector data]' : null
+  });
 
   const { error } = await supabase.from('stories').insert(insertData);
 
