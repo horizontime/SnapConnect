@@ -182,7 +182,7 @@ export default function StoriesScreen() {
             onPress={() => setActiveFilter('latest')}
           >
             <Text style={[styles.filterButtonText, activeFilter === 'latest' && styles.filterButtonTextActive]}>
-              Latest
+              Latest Stories
             </Text>
           </TouchableOpacity>
         </View>
