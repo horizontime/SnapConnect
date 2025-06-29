@@ -73,8 +73,6 @@ export default function StoryScreen() {
     if (!id) return;
     
     try {
-      console.log('[StoryViewer] Fetching story:', id);
-      
       // Fetch story with user info
       const { data, error } = await supabase
         .from('stories')
@@ -96,7 +94,6 @@ export default function StoryScreen() {
         return;
       }
       
-      console.log('[StoryViewer] Story data:', data);
       setStory(data);
       setLoading(false);
       

@@ -85,13 +85,11 @@ export default function CreateStoryScreen() {
       // Compress image before upload (only for images)
       let mediaToUpload = finalUri;
       if (mediaType === 'image') {
-        console.log('[StoryCreate] Compressing image before upload...');
         mediaToUpload = await compressImage(finalUri, {
           compress: 0.7,
           maxWidth: 1080,
           maxHeight: 1920,
         });
-        console.log('[StoryCreate] Image compressed:', mediaToUpload);
       }
 
       // Upload media to stories bucket

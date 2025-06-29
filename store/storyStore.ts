@@ -115,7 +115,6 @@ export const useStoryStore = create<StoryState>((set, get) => ({
   // Fetch recommended stories by similarity
   fetchRecommendedStories: async (userId: string) => {
     try {
-      console.log('[StoryStore] Fetching recommended stories for user:', userId);
       const recommendedStories = await fetchStoriesBySimilarity(userId, 20);
       
       // Map to ensure required fields exist
@@ -127,7 +126,6 @@ export const useStoryStore = create<StoryState>((set, get) => ({
       }));
       
       set({ recommendedStories: mappedStories });
-      console.log('[StoryStore] Loaded', mappedStories.length, 'recommended stories');
     } catch (error) {
       console.error('[StoryStore] Failed to fetch recommended stories:', error);
       set({ recommendedStories: [] });
