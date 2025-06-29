@@ -97,6 +97,14 @@ export const useSnapStore = create<State>((set, get) => ({
 
   subscribeToSnaps: (userId: string) => {
     console.log('[SnapStore] Setting up real-time subscription for user:', userId);
+
+    // If we already have a subscription for this user, reuse it instead of creating a new one
+    const existingChannel = (window as any).__snapChannel as any | undefined;
+    if (existingChannel && existingChannel.topic === `realtime:public:snaps-${userId}`) {
+      console.log('[SnapStore] Reusing existing snaps channel');
+      return; // Already subscribed – no need to set up again
+    }
+
     const channel = supabase.channel(`snaps-${userId}`);
 
     channel.on(

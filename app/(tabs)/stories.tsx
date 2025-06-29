@@ -38,9 +38,18 @@ export default function StoriesScreen() {
         return dateB - dateA; // Descending order (newest first)
       });
     } else {
-      // Use recommended stories if available
+      // Use recommended stories if available and filter out friends
       const hasRecommendations = recommendedStories && recommendedStories.length > 0;
-      return hasRecommendations ? recommendedStories : baseOtherStories;
+
+      // Helper to ensure we never leak friend stories into this list
+      const filterNonFriendStories = (storiesArr: any[]) =>
+        storiesArr.filter((s: any) =>
+          (s.userId !== userId && s.user_id !== userId) && !s.user?.isFriend
+        );
+
+      return hasRecommendations
+        ? filterNonFriendStories(recommendedStories)
+        : baseOtherStories;
     }
   };
   
