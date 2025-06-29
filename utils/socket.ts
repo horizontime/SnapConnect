@@ -49,6 +49,11 @@ export async function getSocket() {
   return socket;
 }
 
+export function getExistingSocket() {
+  // Returns the existing socket without creating a new one
+  return socket;
+}
+
 export function disconnectSocket() {
   if (socket && socket.connected) {
     socket.disconnect();

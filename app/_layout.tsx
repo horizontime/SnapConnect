@@ -1,17 +1,24 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { colors } from "@/constants/colors";
-import { ensureMediaBuckets, testSupabaseConnection } from "@/utils/supabase";
+import { ensureMediaBuckets, testSupabaseConnection, supabase } from "@/utils/supabase";
 import * as NavigationBar from 'expo-navigation-bar';
 import { Platform } from 'react-native';
+import { useAuthStore } from "@/store/authStore";
+import { useColorScheme } from "react-native";
+import { useRouter } from "expo-router";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const { isAuthenticated, login } = useAuthStore();
+  const colorScheme = useColorScheme();
+  const router = useRouter();
+  const [isReady, setIsReady] = useState(false);
   const [loaded, error] = useFonts({
     ...FontAwesome.font,
   });
@@ -47,6 +54,66 @@ export default function RootLayout() {
         console.log('[App] Network diagnostic completed:', result ? 'SUCCESS' : 'FAILED');
       }).catch(console.error);
     }
+
+    // Check for existing session on app launch
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('[App] Session error:', error);
+        // If we get an invalid refresh token error, clear the session
+        if (error.message?.includes('Invalid Refresh Token') || 
+            error.message?.includes('Refresh Token Not Found')) {
+          console.log('[App] Clearing invalid session');
+          // Clear any stored auth state
+          useAuthStore.getState().logout();
+        }
+        setIsReady(true);
+        return;
+      }
+      
+      if (session?.user) {
+        console.log('[App] Valid session found for user:', session.user.id);
+        // Session is valid, user stays logged in
+      }
+      
+      setIsReady(true);
+    });
+    
+    // Listen for auth state changes (including refresh token errors)
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[App] Auth state change:', event);
+      
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('[App] Token refreshed successfully');
+      } else if (event === 'SIGNED_OUT') {
+        // Clear local auth state
+        useAuthStore.getState().logout();
+      } else if (event === 'SIGNED_IN' && session?.user) {
+        // Update local auth state if needed
+        const profile = session.user.user_metadata;
+        if (profile?.username) {
+          useAuthStore.getState().login(
+            session.user.id,
+            profile.username,
+            profile.display_name || profile.username,
+            profile.avatar_url || ''
+          );
+        }
+      }
+    });
+    
+    // Also set up error handler for auth errors
+    supabase.auth.onAuthStateChange((event, session) => {
+      // This will catch any auth errors including refresh token issues
+      if (!session && (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN')) {
+        console.error('[App] Auth refresh failed - clearing session');
+        useAuthStore.getState().logout();
+      }
+    });
+    
+    // Cleanup listener on unmount
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
   }, []);
 
   if (!loaded) {

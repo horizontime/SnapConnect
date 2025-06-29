@@ -144,10 +144,22 @@ export default function ProfileScreen() {
   const [isProjectPickerVisible, setIsProjectPickerVisible] = React.useState<boolean>(false);
   
   const handleLogout = async () => {
-    // Clean up socket listeners before logging out
-    await useChatStore.getState().cleanup();
-    // Sign out from Supabase
-    await supabase.auth.signOut();
+    try {
+      // Try to clean up socket listeners, but don't let failures block logout
+      await useChatStore.getState().cleanup();
+    } catch (error) {
+      console.warn('[Profile] Socket cleanup failed during logout:', error);
+      // Continue with logout even if cleanup fails
+    }
+    
+    // Sign out from Supabase - this should clear any invalid tokens
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('[Profile] Supabase signOut failed:', error);
+    }
+    
+    // Clear local auth state
     logout();
   };
   

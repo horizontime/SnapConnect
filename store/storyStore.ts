@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { mockUsers } from '@/constants/mockData';
 import { supabase } from '@/utils/supabase';
 import { Story, StoryItem, User } from '@/types';
 
@@ -29,13 +28,7 @@ export const useStoryStore = create<StoryState>((set, get) => ({
   
   getStoriesWithUserData: () => {
     const { stories } = get();
-    return stories.map(story => {
-      if ((story as any).user) {
-        return story as Story & { user: User };
-      }
-      const user = mockUsers.find(user => user.id === story.userId);
-      return { ...story, user: user! } as Story & { user: User };
-    });
+    return stories.filter(story => (story as any).user) as (Story & { user: User })[];
   },
   
   addStoryItem: (userId, item) => set(state => {
@@ -83,11 +76,7 @@ export const useStoryStore = create<StoryState>((set, get) => ({
   getFriendsStories: (userId) => {
     const { stories } = get();
     const friendStories = stories.filter(story => story.userId !== userId);
-    return friendStories.map(story => {
-      if ((story as any).user) return story as Story & { user: User };
-      const user = mockUsers.find(user => user.id === story.userId);
-      return { ...story, user: user! } as Story & { user: User };
-    });
+    return friendStories.filter(story => (story as any).user) as (Story & { user: User })[];
   },
   
   getAllStories: () => {

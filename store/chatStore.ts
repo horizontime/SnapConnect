@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '@/utils/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { Chat, Message, User } from '@/types';
-import { getSocket, disconnectSocket } from '@/utils/socket';
+import { getSocket, disconnectSocket, getExistingSocket } from '@/utils/socket';
 import {
   CHAT_SEND,
   CHAT_NEW,
@@ -334,17 +334,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   cleanup: async () => {
     try {
-      const socket = await getSocket();
-      socket.off(CHAT_NEW);
-      socket.off(CHAT_READ);
-      socket.off(CHAT_TYPING);
-      socket.off(PRESENCE_UPDATE);
-      console.log('[ChatStore] Socket listeners cleaned up successfully');
+      // Only try to clean up socket listeners if we might have an active socket
+      // Don't create a new socket just to clean it up
+      const socket = getExistingSocket();
+      if (socket) {
+        socket.off(CHAT_NEW);
+        socket.off(CHAT_READ);
+        socket.off(CHAT_TYPING);
+        socket.off(PRESENCE_UPDATE);
+        console.log('[ChatStore] Socket listeners cleaned up successfully');
+      }
     } catch (err: any) {
-      console.error('[ChatStore] Failed to clean up socket listeners', err?.message);
+      console.warn('[ChatStore] Socket cleanup error (non-critical):', err?.message);
     }
     
-    // Disconnect socket
+    // Disconnect socket regardless
     disconnectSocket();
     
     // Reset state
