@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, FlatList, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useStoryStore } from '@/store/storyStore';
 import { useAuthStore } from '@/store/authStore';
@@ -13,6 +13,7 @@ export default function StoriesScreen() {
   const router = useRouter();
   const { userId, avatar: userAvatar } = useAuthStore();
   const { getAllStories, fetchStories, fetchRecommendedStories, recommendedStories } = useStoryStore();
+  const [activeFilter, setActiveFilter] = useState<'recommended' | 'latest'>('recommended');
   
   // Get all stories and categorize them
   const allStories = getAllStories();
@@ -27,18 +28,33 @@ export default function StoriesScreen() {
     (s.userId !== userId && s.user_id !== userId) && s.user?.isFriend
   ) : [];
   
-  // Use recommended stories if available, otherwise fall back to regular other stories
-  const hasRecommendations = recommendedStories && recommendedStories.length > 0;
-  const otherStories = hasRecommendations 
-    ? recommendedStories 
-    : (userId ? allStories.filter((s: any) => 
-        (s.userId !== userId && s.user_id !== userId) && !s.user?.isFriend
-      ) : allStories);
+  // Get other stories based on active filter
+  const getOtherStories = () => {
+    const baseOtherStories = userId ? allStories.filter((s: any) => 
+      (s.userId !== userId && s.user_id !== userId) && !s.user?.isFriend
+    ) : allStories;
+    
+    if (activeFilter === 'latest') {
+      // Sort by most recent date first
+      return [...baseOtherStories].sort((a, b) => {
+        const dateA = new Date(a.created_at || a.createdAt || 0).getTime();
+        const dateB = new Date(b.created_at || b.createdAt || 0).getTime();
+        return dateB - dateA; // Descending order (newest first)
+      });
+    } else {
+      // Use recommended stories if available
+      const hasRecommendations = recommendedStories && recommendedStories.length > 0;
+      return hasRecommendations ? recommendedStories : baseOtherStories;
+    }
+  };
+  
+  const otherStories = getOtherStories();
   
   // Debug logging for each category
   console.log('[StoriesScreen] My stories:', myStories.length);
   console.log('[StoriesScreen] Friends stories:', friendsStories.length);
   console.log('[StoriesScreen] Other/Recommended stories:', otherStories.length);
+  console.log('[StoriesScreen] Active filter:', activeFilter);
   
   if (otherStories.length > 0) {
     console.log('[StoriesScreen] Sample recommended story:', {
@@ -152,9 +168,24 @@ export default function StoriesScreen() {
 
       {/* Recommended Stories Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          {hasRecommendations ? 'Recommended for You' : 'Discover Stories'}
-        </Text>
+        <View style={styles.sectionHeader}>
+          <TouchableOpacity 
+            style={[styles.filterButton, activeFilter === 'recommended' && styles.filterButtonActive]}
+            onPress={() => setActiveFilter('recommended')}
+          >
+            <Text style={[styles.filterButtonText, activeFilter === 'recommended' && styles.filterButtonTextActive]}>
+              Recommended for you
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.filterButton, activeFilter === 'latest' && styles.filterButtonActive]}
+            onPress={() => setActiveFilter('latest')}
+          >
+            <Text style={[styles.filterButtonText, activeFilter === 'latest' && styles.filterButtonTextActive]}>
+              Latest
+            </Text>
+          </TouchableOpacity>
+        </View>
         {otherStories.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No stories to show</Text>
@@ -264,5 +295,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textLight,
     textAlign: 'center',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 12,
+  },
+  filterButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 20,
+    backgroundColor: colors.card,
+  },
+  filterButtonActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
+  },
+  filterButtonText: {
+    fontSize: 14,
+    color: colors.textLight,
+    fontWeight: '500',
+  },
+  filterButtonTextActive: {
+    color: colors.background,
+    fontWeight: '600',
   },
 });
