@@ -141,7 +141,6 @@ export default function StoryScreen() {
         
         if (newProgress >= 100) {
           clearInterval(progressInterval.current!);
-          handleClose();
           return 100;
         }
         
@@ -169,7 +168,6 @@ export default function StoryScreen() {
           
           if (newProgress >= 100) {
             clearInterval(progressInterval.current!);
-            handleClose();
             return 100;
           }
           
@@ -191,6 +189,13 @@ export default function StoryScreen() {
   const handleClose = () => {
     router.back();
   };
+  
+  // Close the story once progress completes (avoids state updates during render)
+  useEffect(() => {
+    if (progress >= 100) {
+      handleClose();
+    }
+  }, [progress]);
   
   if (loading) {
     return (
