@@ -62,9 +62,17 @@ Before you begin, ensure you have the following installed:
      ```
    - Edit `.env` and add your Supabase credentials:
      ```env
-     EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
-     EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+      EXPO_PUBLIC_SUPABASE_URL=your_supabase_project_url
+      EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+      SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key 
+      OPENAI_API_KEY=your_openai_api_key
      ```
+   - Also edit the `.env` in the /server directory:
+      ```env
+      SUPABASE_URL=https://<poject-ref>.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key 
+      PORT=3333          # optional, defaults to 3333
+      ```
 
 ## 🏃‍♂️ Running the App
 
