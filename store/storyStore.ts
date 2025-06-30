@@ -115,7 +115,7 @@ export const useStoryStore = create<StoryState>((set, get) => ({
   // Fetch recommended stories by similarity
   fetchRecommendedStories: async (userId: string) => {
     try {
-      const recommendedStories = await fetchStoriesBySimilarity(userId, 20);
+      const recommendedStories = await fetchStoriesBySimilarity(userId, 100);
       
       // Map to ensure required fields exist
       const mappedStories = recommendedStories.map((s: any) => ({
