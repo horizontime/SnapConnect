@@ -6,6 +6,17 @@
 
 SnapConnect is a social media application designed specifically for the woodworking community. It combines the ephemeral messaging features of Snapchat with specialized tools and content discovery for woodworking enthusiasts. The app features disappearing messages, stories, AR filters for wood projects, and AI-powered content recommendations.
 
+## Demo Screenshots
+
+[Login page](demo-pics/Login_page.PNG)  
+[Snaps DM received](demo-pics/Snaps_DM_received.PNG)  
+[Text chat threads](demo-pics/Text_chat_threads.PNG)  
+[Friends tab](demo-pics/Friends_tab.PNG)  
+[Friends bio](demo-pics/Friends_bio.PNG)  
+[Camera tab](demo-pics/Camera_tab.PNG)  
+[Stories tab](demo-pics/Stories_tab.PNG)  
+[Profile tab](demo-pics/Profile_tab.PNG)
+
 ## ✨ Features
 
 ### Core Features
